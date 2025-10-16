@@ -1,140 +1,140 @@
 /* Nordic/Viking Theme Styles */
 :root {
     --color-primary: #1e3a8a; /* Deep Blue */
-    --color-secondary: #fcd34d; /* Gold/Bronze */
-    --color-background: #0f172a; /* Dark Slate */
-    --color-card: #1f2937; /* Dark Gray Card */
-    --color-text-light: #f3ff6;
-    --color-text-medium: #9ca3af;
-    --color-gear-green: #10b981;
-    --color-gear-blue: #3b82f6;
-    --color-gear-purple: #8b5cf6;
-    --color-gear-legendary: #eab308;
-}
+        --color-secondary: #fcd34d; /* Gold/Bronze */
+            --color-background: #0f172a; /* Dark Slate */
+                --color-card: #1f2937; /* Dark Gray Card */
+                    --color-text-light: #f3ff6;
+                        --color-text-medium: #9ca3af;
+                            --color-gear-green: #10b981;
+                                --color-gear-blue: #3b82f6;
+                                    --color-gear-purple: #8b5cf6;
+                                        --color-gear-legendary: #eab308;
+                                        }
 
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--color-background);
-    color: var(--color-text-light);
-    min-height: 100vh;
-}
+                                        body {
+                                            font-family: 'Inter', sans-serif;
+                                                background-color: var(--color-background);
+                                                    color: var(--color-text-light);
+                                                        min-height: 100vh;
+                                                        }
 
-/* Custom Scrollbar for Item Search Results */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: var(--color-card);
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-primary);
-    border-radius: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--color-secondary);
-}
+                                                        /* Custom Scrollbar for Item Search Results */
+                                                        .custom-scrollbar::-webkit-scrollbar {
+                                                            width: 8px;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-track {
+                                                                background: var(--color-card);
+                                                                }
+                                                                .custom-scrollbar::-webkit-scrollbar-thumb {
+                                                                    background: var(--color-primary);
+                                                                        border-radius: 4px;
+                                                                        }
+                                                                        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                                                                            background: var(--color-secondary);
+                                                                            }
 
-/* Custom Toggle Switch */
-.broken-toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 48px;
-    height: 24px;
-}
-.broken-toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.broken-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ef4444; /* Red for Broken */
-    transition: .4s;
-    border-radius: 24px;
-}
-.broken-slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-input:checked + .broken-slider {
-    background-color: #10b981; /* Green for Repaired */
-}
-input:checked + .broken-slider:before {
-    transform: translateX(24px);
-}
- 
-/* Gold Accent Text */
-.gold-text {
-    color: var(--color-secondary);
-}
+                                                                            /* Custom Toggle Switch */
+                                                                            .broken-toggle-switch {
+                                                                                position: relative;
+                                                                                    display: inline-block;
+                                                                                        width: 48px;
+                                                                                            height: 24px;
+                                                                                            }
+                                                                                            .broken-toggle-switch input {
+                                                                                                opacity: 0;
+                                                                                                    width: 0;
+                                                                                                        height: 0;
+                                                                                                        }
+                                                                                                        .broken-slider {
+                                                                                                            position: absolute;
+                                                                                                                cursor: pointer;
+                                                                                                                    top: 0;
+                                                                                                                        left: 0;
+                                                                                                                            right: 0;
+                                                                                                                                bottom: 0;
+                                                                                                                                    background-color: #ef4444; /* Red for Broken */
+                                                                                                                                        transition: .4s;
+                                                                                                                                            border-radius: 24px;
+                                                                                                                                            }
+                                                                                                                                            .broken-slider:before {
+                                                                                                                                                position: absolute;
+                                                                                                                                                    content: "";
+                                                                                                                                                        height: 16px;
+                                                                                                                                                            width: 16px;
+                                                                                                                                                                left: 4px;
+                                                                                                                                                                    bottom: 4px;
+                                                                                                                                                                        background-color: white;
+                                                                                                                                                                            transition: .4s;
+                                                                                                                                                                                border-radius: 50%;
+                                                                                                                                                                                }
+                                                                                                                                                                                input:checked + .broken-slider {
+                                                                                                                                                                                    background-color: #10b981; /* Green for Repaired */
+                                                                                                                                                                                    }
+                                                                                                                                                                                    input:checked + .broken-slider:before {
+                                                                                                                                                                                        transform: translateX(24px);
+                                                                                                                                                                                        }
+                                                                                                                                                                                         
+                                                                                                                                                                                         /* Gold Accent Text */
+                                                                                                                                                                                         .gold-text {
+                                                                                                                                                                                             color: var(--color-secondary);
+                                                                                                                                                                                             }
 
-/* Rarity Badges */
-.rarity-green { background-color: var(--color-gear-green); }
-.rarity-blue { background-color: var(--color-gear-blue); }
-.rarity-purple { background-color: var(--color-gear-purple); }
-.rarity-legendary { background-color: var(--color-gear-legendary); }
-.rarity-none { background-color: var(--color-text-medium); }
+                                                                                                                                                                                             /* Rarity Badges */
+                                                                                                                                                                                             .rarity-green { background-color: var(--color-gear-green); }
+                                                                                                                                                                                             .rarity-blue { background-color: var(--color-gear-blue); }
+                                                                                                                                                                                             .rarity-purple { background-color: var(--color-gear-purple); }
+                                                                                                                                                                                             .rarity-legendary { background-color: var(--color-gear-legendary); }
+                                                                                                                                                                                             .rarity-none { background-color: var(--color-text-medium); }
 
-/* Fixed Panels for PC view (Market Ledger UX) */
-@media (min-width: 1024px) {
-    .fixed-panel-left {
-        position: fixed;
-        width: 33%; /* 1/3 of the screen */
-        top: 0;
-        left: 0;
-        height: 100vh;
-        overflow-y: auto;
-    }
-    .fixed-panel-right {
-        position: fixed;
-        width: 33%; /* 1/3 of the screen */
-        top: 0;
-        right: 0;
-        height: 100vh;
-        overflow-y: auto;
-    }
-    .scrollable-content {
-        margin-left: 33%;
-        margin-right: 33%;
-        padding: 2rem;
-    }
-    .main-container {
-        display: flex;
-    }
-}
- 
-/* Balance Bar Styles */
-.balance-scale-container {
-    display: flex;
-    align-items: center;
-    height: 20px;
-    background: #4b5563; /* Gray background */
-    border-radius: 5px;
-    overflow: hidden;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-}
+                                                                                                                                                                                             /* Fixed Panels for PC view (Market Ledger UX) */
+                                                                                                                                                                                             @media (min-width: 1024px) {
+                                                                                                                                                                                                 .fixed-panel-left {
+                                                                                                                                                                                                         position: fixed;
+                                                                                                                                                                                                                 width: 33%; /* 1/3 of the screen */
+                                                                                                                                                                                                                         top: 0;
+                                                                                                                                                                                                                                 left: 0;
+                                                                                                                                                                                                                                         height: 100vh;
+                                                                                                                                                                                                                                                 overflow-y: auto;
+                                                                                                                                                                                                                                                     }
+                                                                                                                                                                                                                                                         .fixed-panel-right {
+                                                                                                                                                                                                                                                                 position: fixed;
+                                                                                                                                                                                                                                                                         width: 33%; /* 1/3 of the screen */
+                                                                                                                                                                                                                                                                                 top: 0;
+                                                                                                                                                                                                                                                                                         right: 0;
+                                                                                                                                                                                                                                                                                                 height: 100vh;
+                                                                                                                                                                                                                                                                                                         overflow-y: auto;
+                                                                                                                                                                                                                                                                                                             }
+                                                                                                                                                                                                                                                                                                                 .scrollable-content {
+                                                                                                                                                                                                                                                                                                                         margin-left: 33%;
+                                                                                                                                                                                                                                                                                                                                 margin-right: 33%;
+                                                                                                                                                                                                                                                                                                                                         padding: 2rem;
+                                                                                                                                                                                                                                                                                                                                             }
+                                                                                                                                                                                                                                                                                                                                                 .main-container {
+                                                                                                                                                                                                                                                                                                                                                         display: flex;
+                                                                                                                                                                                                                                                                                                                                                             }
+                                                                                                                                                                                                                                                                                                                                                             }
+                                                                                                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                              /* Balance Bar Styles */
+                                                                                                                                                                                                                                                                                                                                                              .balance-scale-container {
+                                                                                                                                                                                                                                                                                                                                                                  display: flex;
+                                                                                                                                                                                                                                                                                                                                                                      align-items: center;
+                                                                                                                                                                                                                                                                                                                                                                          height: 20px;
+                                                                                                                                                                                                                                                                                                                                                                              background: #4b5563; /* Gray background */
+                                                                                                                                                                                                                                                                                                                                                                                  border-radius: 5px;
+                                                                                                                                                                                                                                                                                                                                                                                      overflow: hidden;
+                                                                                                                                                                                                                                                                                                                                                                                          margin-top: 0.5rem;
+                                                                                                                                                                                                                                                                                                                                                                                              margin-bottom: 0.5rem;
+                                                                                                                                                                                                                                                                                                                                                                                              }
 
-.balance-bar-offer {
-    height: 100%;
-    background-color: #3b82f6; /* Blue for Offer */
-    transition: width 0.5s ease-in-out;
-}
+                                                                                                                                                                                                                                                                                                                                                                                              .balance-bar-offer {
+                                                                                                                                                                                                                                                                                                                                                                                                  height: 100%;
+                                                                                                                                                                                                                                                                                                                                                                                                      background-color: #3b82f6; /* Blue for Offer */
+                                                                                                                                                                                                                                                                                                                                                                                                          transition: width 0.5s ease-in-out;
+                                                                                                                                                                                                                                                                                                                                                                                                          }
 
-.balance-bar-target {
-    height: 100%;
-    background-color: #10b981; /* Green for Target */
-    transition: width 0.5s ease-in-out;
-}
+                                                                                                                                                                                                                                                                                                                                                                                                          .balance-bar-target {
+                                                                                                                                                                                                                                                                                                                                                                                                              height: 100%;
+                                                                                                                                                                                                                                                                                                                                                                                                                  background-color: #10b981; /* Green for Target */
+                                                                                                                                                                                                                                                                                                                                                                                                                      transition: width 0.5s ease-in-out;
+                                                                                                                                                                                                                                                                                                                                                                                                                      }
