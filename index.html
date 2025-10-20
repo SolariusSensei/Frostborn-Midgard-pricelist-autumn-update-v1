@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Midgard Barter Ledger</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app" class="p-4 lg:p-6 max-w-7xl mx-auto">
+
+    <div id="trade-agreement" class="lg:grid lg:grid-cols-2 lg:gap-8 mb-8">
+
+        <div id="your-offer-panel" class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 lg:mb-0">
+            <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">YOUR OFFER</h2>
+            <div id="offerSlots" class="space-y-6 max-h-[60vh] lg:max-h-none overflow-y-auto custom-scrollbar pr-2">
+                </div>
+            <button id="addOfferSlot" class="w-full mt-6 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
+                Add Item to Your Offer (Max 5)
+            </button>
+        </div>
+
+        <div id="their-offer-panel" class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">THEIR OFFER</h2>
+            <div id="target-slot">
+                <h3 class="text-xl font-semibold mb-3 text-gray-300">What you want to acquire</h3>
+                <div id="targetItemContainer">
+                    <input type="text" id="targetSearch" placeholder="Search for the item you want..." class="w-full p-2 mb-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+                    <div id="targetSearchResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mb-2 hidden"></div>
+                    <div class="text-sm font-semibold p-2 rounded-md bg-gray-900 border border-gray-700 min-h-[35px] text-gray-400">
+                        <span class="text-xs text-amber-500 block">Selected:</span> <span id="targetItemNameDisplay">None</span>
+                    </div>
+                </div>
+                
+                <div id="targetControls" class="mt-4">
+                    <label class="block text-sm font-medium mb-1 text-gray-400">Quantity</label>
+                    <input type="number" id="targetQuantity" min="1" value="1" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
+                
+                    <div id="targetGearControls" class="space-y-3 mt-4 hidden">
+                        <div class="flex justify-between items-center text-sm font-medium">
+                            <span class="text-gray-400">Base LS:</span>
+                            <span id="targetBaseLSDisplay" class="font-bold">0</span>
+                        </div>
+                        <div>
+                            <label for="targetUpgradeLevel" class="block text-sm font-medium text-gray-400">Upgrade Level (<span id="targetLevelLabel">+0</span>)</label>
+                            <input type="range" id="targetUpgradeLevel" min="0" max="0" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                        </div>
+                        <div id="targetArmorSelector" class="hidden">
+                            <label class="block text-sm font-medium mb-2 text-gray-400">Select Armor Piece</label>
+                            <div id="targetPieceButtons" class="grid grid-cols-2 gap-2 text-xs">
+                                <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
+                                <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
+                                <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
+                                <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
+                                <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-400">Broken Status</span>
+                            <label class="broken-toggle-switch">
+                                <input type="checkbox" id="targetBrokenToggle">
+                                <span class="broken-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="verdict-section" class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center text-center">
+            <div class="p-4 bg-blue-900/50 rounded-lg border border-blue-700">
+                <h3 class="text-lg font-semibold text-gray-400 mb-1">Your Total Value</h3>
+                <span id="your-total-ls" class="text-3xl font-bold text-blue-300">0.00 LS</span>
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-semibold text-gray-400 mb-1">Live Difference</h3>
+                <span id="liveDifference" class="text-3xl font-bold text-gray-300">0.00 LS</span>
+            </div>
+            <div class="p-4 bg-amber-900/50 rounded-lg border border-amber-700">
+                <h3 class="text-lg font-semibold text-gray-400 mb-1">Their Total Value</h3>
+                <span id="their-total-ls" class="text-3xl font-bold text-amber-300">0.00 LS</span>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold mb-1 text-gray-400 text-center">Trade Balance</h3>
+            <div class="balance-scale-container">
+                <div id="balanceBarOffer" class="balance-bar-offer" style="width: 50%;"></div>
+                <div id="balanceBarTarget" class="balance-bar-target" style="width: 50%;"></div>
+            </div>
+            <p id="balanceStatusText" class="text-center text-sm font-medium mt-1">Select items to begin trade.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="verdictBox" class="p-4 rounded-lg shadow-xl">
+                <h3 class="text-xl font-bold mb-3 text-center">Final Verdict</h3>
+                <p id="tradeVerdict" class="text-center text-lg font-semibold text-gray-300">Waiting for input...</p>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-400 mb-2">Refund / Deficiency Suggestion</h3>
+                <div id="tradeSuggestion" class="text-sm text-gray-300">Awaiting calculation...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="about-section" class="fixed inset-0 bg-gray-900/95 z-50 p-8 overflow-y-auto hidden">
+        <div class="max-w-4xl mx-auto bg-gray-800 p-8 rounded-xl shadow-2xl">
+            <h1 class="text-4xl font-extrabold gold-text mb-4 border-b pb-2">About This Calculator</h1>
+            <p class="text-gray-400 mb-6">
+                Welcome to the **Midgard Barter Calculator**, an unofficial tool designed to accurately assess the value of trades based on community-sourced LS (Life Stone) prices and complex in-game mechanics.
+                This tool is inspired by and credits **Solarius Sensei** for the extensive data collection.
+                <a href="https://youtube.com/@solariussensei?si=OQfaZMQUDQDLqcvj" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold underline">Visit Solarius Sensei's YouTube Channel</a>.
+            </p>
+            <div id="itemListDisplay" class="space-y-6 text-sm max-h-[50vh] overflow-y-auto custom-scrollbar pr-4">
+                </div>
+            <button onclick="document.getElementById('about-section').classList.add('hidden')" class="w-full mt-8 py-3 bg-red-600 rounded-lg font-bold text-gray-900 hover:bg-red-500 transition shadow-lg">Close</button>
+        </div>
+    </div>
+    <button onclick="document.getElementById('about-section').classList.remove('hidden')" class="fixed bottom-4 right-4 bg-amber-500 text-gray-900 p-3 rounded-full shadow-lg hover:bg-amber-400 transition font-bold z-20">
+        About / Data
+    </button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

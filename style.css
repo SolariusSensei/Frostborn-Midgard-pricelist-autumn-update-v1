@@ -1,0 +1,66 @@
+/* Nordic/Viking Theme Styles */
+:root {
+    --color-primary: #1e3a8a; /* Deep Blue */
+    --color-secondary: #fcd34d; /* Gold/Bronze */
+    --color-background: #0f172a; /* Dark Slate */
+    --color-card: #1f2937; /* Dark Gray Card */
+    --color-text-light: #f3f4f6;
+    --color-text-medium: #9ca3af;
+    --color-gear-green: #10b981;
+    --color-gear-blue: #3b82f6;
+    --color-gear-purple: #8b5cf6;
+    --color-gear-legendary: #eab308;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text-light);
+    min-height: 100vh;
+}
+
+/* --- NEW LAYOUT STYLES --- */
+#your-offer-panel > h2,
+#their-offer-panel > h2,
+#about-section h1 {
+    border-bottom-color: var(--color-secondary);
+    border-bottom-width: 2px;
+}
+
+/* Custom Scrollbar for Item Search Results */
+.custom-scrollbar::-webkit-scrollbar { width: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: var(--color-card); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-secondary); }
+
+/* Custom Toggle Switch */
+.broken-toggle-switch { position: relative; display: inline-block; width: 48px; height: 24px; }
+.broken-toggle-switch input { opacity: 0; width: 0; height: 0; }
+.broken-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ef4444; transition: .4s; border-radius: 24px; }
+.broken-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .broken-slider { background-color: #10b981; }
+input:checked + .broken-slider:before { transform: translateX(24px); }
+
+/* Gold Accent Text */
+.gold-text { color: var(--color-secondary); }
+
+/* Balance Bar Styles */
+.balance-scale-container { display: flex; align-items: center; height: 20px; background: #4b5563; border-radius: 5px; overflow: hidden; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.balance-bar-offer { height: 100%; background-color: var(--color-gear-blue); transition: width 0.5s ease-in-out; }
+.balance-bar-target { height: 100%; background-color: var(--color-gear-legendary); transition: width 0.5s ease-in-out; }
+
+/* Rarity Indicator Dot in Search Results */
+.search-result-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; cursor: pointer; transition: background-color 0.2s ease; }
+.search-result-item:hover { background-color: #4b5563; }
+.search-result-name { display: flex; align-items: center; gap: 0.5rem; overflow: hidden; }
+.search-result-name span { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.rarity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.search-result-price { padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; color: #1f2937; white-space: nowrap; }
+
+/* Styled Verdict Box */
+#verdictBox { border: 2px solid var(--color-text-medium); transition: border-color 0.3s ease, background-color 0.3s ease; background-color: rgba(31, 41, 55, 0.5); }
+#verdictBox.status-balanced { border-color: var(--color-gear-green); background-color: rgba(16, 185, 129, 0.1); }
+#verdictBox.status-overpaid { border-color: var(--color-gear-blue); background-color: rgba(59, 130, 246, 0.1); }
+#verdictBox.status-deficit { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.1); }
+#verdictBox h3 { margin-bottom: 0.75rem; text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--color-secondary); }
+#tradeVerdict { text-align: center; font-size: 1.125rem; font-weight: 600; }
