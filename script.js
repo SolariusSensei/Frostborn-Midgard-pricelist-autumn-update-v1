@@ -1,148 +1,68 @@
-// --- SUPABASE CONFIG ---
-const SUPABASE_URL = 'https://wahedllttsxoraihmwzm.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaGVkbGx0dHN4b3JhaWhtd3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjk3NTEsImV4cCI6MjA5ODMwNTc1MX0.lqGNfyUsSZ6ePHz3Li1bjNKiy4mAxk44pHx5I8Qxg50';
+// --- CONFIGURATION ---
+const SUPABASE_URL = 'https://wahedllttsxoraihmwzm.supabase.co'; 
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaGVkbGx0dHN4b3JhaWhtd3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjk3NTEsImV4cCI6MjA5ODMwNTc1MX0.lqGNfyUsSZ6ePHz3Li1bjNKiy4mAxk44pHx5I8Qxg50
 
 // --- STATE ---
 let ITEM_DATABASE = {};
 let currentServerId = null;
-let targetState = { name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' };
-let offerStates = [];
 
-const ARMOR_WEIGHTING = { 'Full Set': 1.00, 'Head': 0.20, 'Chest': 0.30, 'Pants': 0.22, 'Boots': 0.28 };
-const UPGRADE_LIMITS = { 'G': 3, 'B': 3, 'P': 5, 'L': 10, 'N': 0 };
-
-// --- SUPABASE HELPERS ---
+// --- CORE FUNCTIONS ---
 async function supabaseFetch(endpoint) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
-        headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-    });
-    return res.json();
-}
-
-async function supabaseInsert(table, data) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-        method: 'POST',
-        headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(data)
-    });
-    return res.ok;
-}
-
-// --- LOAD SERVERS ---
-async function loadServers() {
     try {
-        console.log("Fetching servers...");
-        const servers = await supabaseFetch('servers?select=*&order=name');
-        
-        // Debugging: see what Supabase sent back in the browser console
-        console.log("Servers received:", servers);
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        return await res.json();
+    } catch (e) { console.error(e); return []; }
+}
 
-        if (!Array.isArray(servers)) {
-            console.error("Supabase did not return an array. Check your API key/URL.");
-            return;
-        }
-
+async function loadServers() {
+    const servers = await supabaseFetch('servers?select=*&order=name');
+    if (Array.isArray(servers) && servers.length > 0) {
         const selector = document.getElementById('serverSelector');
-        if (!selector) {
-            console.error("Could not find element with id 'serverSelector' in your HTML!");
-            return;
-        }
-
-        selector.innerHTML = servers.map(s =>
-            `<option value="${s.id}">${s.name}</option>`
-        ).join('');
-        
-        if (servers.length > 0) {
-            currentServerId = servers[0].id;
-            await loadItems();
-        }
-    } catch (err) {
-        console.error("Error in loadServers:", err);
+        selector.innerHTML = servers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        currentServerId = servers[0].id;
+        await loadItems();
     }
 }
 
-// --- LOAD ITEMS FROM SUPABASE ---
 async function loadItems() {
-    const items = await supabaseFetch(
-        `items?select=*&server_id=eq.${currentServerId}&order=name`
-    );
+    if (!currentServerId) return;
+    const items = await supabaseFetch(`items?select=*&server_id=eq.${currentServerId}`);
     ITEM_DATABASE = {};
     items.forEach(item => {
         ITEM_DATABASE[item.name] = {
             price: Number(item.price),
-            category: item.category,
             rarity: item.rarity,
-            isGear: ['W', 'A', 'P'].includes(item.category),
-            isArmorSet: item.category === 'A',
-            isConsumable: ['F', 'G'].includes(item.category)
+            category: item.category,
+            isGear: ['W', 'A', 'P'].includes(item.category)
         };
     });
-    populateAboutSection();
 }
 
-// --- ADMIN FUNCTIONS ---
+// --- ADMIN PANEL ---
 async function loadAdminPanel() {
-    const { data: suggestions } = await supabaseFetch('price_suggestions?status=eq.pending');
-console.log("Suggestions from database:", suggestions);
-    
     const container = document.getElementById('adminPanel');
+    container.innerHTML = "Loading...";
+    const suggestions = await supabaseFetch('price_suggestions?status=eq.pending');
+    
+    if (suggestions.length === 0) {
+        container.innerHTML = "No pending suggestions.";
+        return;
+    }
+
     container.innerHTML = suggestions.map(s => `
-        <div class="p-4 bg-gray-800 border border-gray-600 rounded mb-2 flex justify-between">
-            <div>
-                <p class="font-bold">${s.item_name}</p>
-                <p class="text-sm">Suggested: ${s.suggested_price} LS (Reason: ${s.reason || 'None'})</p>
-            </div>
-            <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
-                    class="bg-green-600 px-4 py-2 rounded">Approve</button>
+        <div class="p-2 border-b border-gray-700 flex justify-between">
+            <span>${s.item_name}: ${s.suggested_price} LS</span>
+            <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" class="text-green-500">Approve</button>
         </div>
     `).join('');
 }
 
-async function approvePrice(suggestionId, itemName, newPrice) {
-    // 1. Update the item price
-    await fetch(`${SUPABASE_URL}/rest/v1/items?name=eq.${encodeURIComponent(itemName)}`, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price: newPrice })
-    });
-
-    // 2. Mark suggestion as approved
-    await fetch(`${SUPABASE_URL}/rest/v1/price_suggestions?id=eq.${suggestionId}`, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'approved' })
-    });
-
-    alert("Price Updated!");
-    loadAdminPanel();
-    loadItems(); // Refresh the active list
-}
-
-function toggleAdminPanel() {
-    const wrapper = document.getElementById('adminPanelWrapper');
-    wrapper.classList.toggle('hidden');
-    if (!wrapper.classList.contains('hidden')) {
-        loadAdminPanel(); // Refresh the list whenever we open the panel
-    }
-}
-
-// Add this to your script.js
-function unlockAdmin() {
-    const password = prompt("Enter Admin Password:");
-    if (password === "Leo123") { // You can change this password to whatever you want
-        document.getElementById('admin-only-section').style.display = 'block';
-    } else {
-        alert("Access Denied.");
-    }
-}
+// --- INITIALIZE ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadServers();
+});
 
 // --- UTILITY FUNCTIONS ---
 function formatLS(value) {
