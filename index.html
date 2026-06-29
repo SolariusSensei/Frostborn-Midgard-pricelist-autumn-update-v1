@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
+<body>
+
     <!-- Visible Admin Section for testing -->
 <div id="admin-test-area" style="margin-top: 50px; padding: 20px; border: 1px solid red;">
     <h3 style="color: white;">Admin Control Panel</h3>
@@ -15,7 +17,6 @@
     </button>
     <div id="adminPanel" style="color: white; margin-top: 10px;"></div>
 </div>
-<body>
     
 <div id="app" class="p-4 lg:p-6 max-w-7xl mx-auto">
     <!-- Loading Overlay -->
@@ -184,6 +185,16 @@
     <button onclick="document.getElementById('about-section').classList.remove('hidden')" class="fixed bottom-4 right-4 bg-amber-500 text-gray-900 p-3 rounded-full shadow-lg hover:bg-amber-400 transition font-bold z-20">
         About / Data
     </button>
+    <!-- Admin Section -->
+<div class="mt-10 border-t border-gray-700 pt-6">
+    <button onclick="toggleAdminPanel()" class="text-xs text-gray-500 hover:text-gray-300 transition">
+        View Pending Suggestions
+    </button>
+    
+    <div id="adminPanelWrapper" class="hidden mt-4">
+        <h2 class="text-lg font-bold text-white mb-4">Pending Price Suggestions</h2>
+        <div id="adminPanel"></div>
+    </div>
 </div>
 </div>
 
