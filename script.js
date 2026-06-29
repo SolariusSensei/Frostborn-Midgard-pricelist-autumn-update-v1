@@ -91,6 +91,7 @@ async function loadItems() {
 // --- ADMIN FUNCTIONS ---
 async function loadAdminPanel() {
     const { data: suggestions } = await supabaseFetch('price_suggestions?status=eq.pending');
+console.log("Suggestions from database:", suggestions);
     
     const container = document.getElementById('adminPanel');
     container.innerHTML = suggestions.map(s => `
