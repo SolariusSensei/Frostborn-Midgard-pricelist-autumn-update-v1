@@ -90,20 +90,51 @@ async function loadItems() {
 
 // --- ADMIN FUNCTIONS ---
 async function loadAdminPanel() {
-    const { data: suggestions } = await supabaseFetch('price_suggestions?status=eq.pending');
-console.log("Suggestions from database:", suggestions);
-    
     const container = document.getElementById('adminPanel');
-    container.innerHTML = suggestions.map(s => `
-        <div class="p-4 bg-gray-800 border border-gray-600 rounded mb-2 flex justify-between">
-            <div>
-                <p class="font-bold">${s.item_name}</p>
-                <p class="text-sm">Suggested: ${s.suggested_price} LS (Reason: ${s.reason || 'None'})</p>
+    container.innerHTML = "Loading..."; // Shows you it's trying
+
+    try {
+        // We add a short timeout to prevent "forever loading"
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds max
+
+        // Fetching with a cleaner URL format
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/price_suggestions?status=eq.pending`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        
+        const suggestions = await response.json();
+
+        if (suggestions.length === 0) {
+            container.innerHTML = "No pending suggestions found.";
+            return;
+        }
+
+        container.innerHTML = suggestions.map(s => `
+            <div class="p-4 bg-gray-800 border border-gray-600 rounded mb-2 flex justify-between">
+                <div>
+                    <p class="font-bold">${s.item_name}</p>
+                    <p class="text-sm">Suggested: ${s.suggested_price} LS</p>
+                </div>
+                <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
+                        class="bg-green-600 px-4 py-2 rounded">Approve</button>
             </div>
-            <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
-                    class="bg-green-600 px-4 py-2 rounded">Approve</button>
-        </div>
-    `).join('');
+        `).join('');
+
+    } catch (err) {
+        console.error("Admin Panel Error:", err);
+        container.innerHTML = "Error loading. Check Console (F12).";
+    }
 }
 
 async function approvePrice(suggestionId, itemName, newPrice) {
