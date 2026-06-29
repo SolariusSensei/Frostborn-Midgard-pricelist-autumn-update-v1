@@ -38,22 +38,35 @@ async function supabaseInsert(table, data) {
 
 // --- LOAD SERVERS ---
 async function loadServers() {
-    const servers = await supabaseFetch('servers?select=*&order=name');
-    const selector = document.getElementById('serverSelector');
-    selector.innerHTML = servers.map(s =>
-        `<option value="${s.id}">${s.name}</option>`
-    ).join('');
-    if (servers.length > 0) {
-        currentServerId = servers[0].id;
-        await loadItems();
+    try {
+        console.log("Fetching servers...");
+        const servers = await supabaseFetch('servers?select=*&order=name');
+        
+        // Debugging: see what Supabase sent back in the browser console
+        console.log("Servers received:", servers);
+
+        if (!Array.isArray(servers)) {
+            console.error("Supabase did not return an array. Check your API key/URL.");
+            return;
+        }
+
+        const selector = document.getElementById('serverSelector');
+        if (!selector) {
+            console.error("Could not find element with id 'serverSelector' in your HTML!");
+            return;
+        }
+
+        selector.innerHTML = servers.map(s =>
+            `<option value="${s.id}">${s.name}</option>`
+        ).join('');
+        
+        if (servers.length > 0) {
+            currentServerId = servers[0].id;
+            await loadItems();
+        }
+    } catch (err) {
+        console.error("Error in loadServers:", err);
     }
-    selector.addEventListener('change', async (e) => {
-        currentServerId = e.target.value;
-        showLoading(true);
-        await loadItems();
-        resetTrade();
-        showLoading(false);
-    });
 }
 
 // --- LOAD ITEMS FROM SUPABASE ---
