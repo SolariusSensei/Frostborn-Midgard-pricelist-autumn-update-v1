@@ -671,3 +671,8 @@ async function loadAdminPanel() {
         </div>
     `).join('');
 }
+// Ensure this is at the bottom of script.js, NOT inside another { } block
+async function loadAdminPanel() {
+    console.log("Loading admin panel...");
+    // ... rest of your code
+}
