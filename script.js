@@ -125,6 +125,14 @@ async function approvePrice(suggestionId, itemName, newPrice) {
     loadItems(); // Refresh the active list
 }
 
+function toggleAdminPanel() {
+    const wrapper = document.getElementById('adminPanelWrapper');
+    wrapper.classList.toggle('hidden');
+    if (!wrapper.classList.contains('hidden')) {
+        loadAdminPanel(); // Refresh the list whenever we open the panel
+    }
+}
+
 // --- UTILITY FUNCTIONS ---
 function formatLS(value) {
     const numValue = Number(value);
