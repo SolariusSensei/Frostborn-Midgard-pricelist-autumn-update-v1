@@ -88,6 +88,43 @@ async function loadItems() {
     populateAboutSection();
 }
 
+// --- ADMIN FUNCTIONS ---
+async function loadAdminPanel() {
+    const { data: suggestions } = await supabaseFetch('price_suggestions?status=eq.pending');
+    
+    const container = document.getElementById('adminPanel');
+    container.innerHTML = suggestions.map(s => `
+        <div class="p-4 bg-gray-800 border border-gray-600 rounded mb-2 flex justify-between">
+            <div>
+                <p class="font-bold">${s.item_name}</p>
+                <p class="text-sm">Suggested: ${s.suggested_price} LS (Reason: ${s.reason || 'None'})</p>
+            </div>
+            <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
+                    class="bg-green-600 px-4 py-2 rounded">Approve</button>
+        </div>
+    `).join('');
+}
+
+async function approvePrice(suggestionId, itemName, newPrice) {
+    // 1. Update the item price
+    await fetch(`${SUPABASE_URL}/rest/v1/items?name=eq.${encodeURIComponent(itemName)}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: newPrice })
+    });
+
+    // 2. Mark suggestion as approved
+    await fetch(`${SUPABASE_URL}/rest/v1/price_suggestions?id=eq.${suggestionId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' })
+    });
+
+    alert("Price Updated!");
+    loadAdminPanel();
+    loadItems(); // Refresh the active list
+}
+
 // --- UTILITY FUNCTIONS ---
 function formatLS(value) {
     const numValue = Number(value);
