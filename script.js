@@ -663,19 +663,22 @@ function closeAdminModal() {
     document.getElementById('adminModal').classList.add('hidden');
 }
 
-// Konami code to open admin panel — Up Up Down Down Left Right Left Right B A
-const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
-let konamiIndex = 0;
-document.addEventListener('keydown', (e) => {
-    if (e.key === KONAMI[konamiIndex]) {
-        konamiIndex++;
-        if (konamiIndex === KONAMI.length) {
-            konamiIndex = 0;
+// --- ADMIN PASSWORD PROMPT ---
+let adminClickCount = 0;
+let adminClickTimer = null;
+
+document.getElementById('adminTrigger').addEventListener('click', () => {
+    adminClickCount++;
+    clearTimeout(adminClickTimer);
+    adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 2000);
+
+    if (adminClickCount >= 3) {
+        adminClickCount = 0;
+        const password = prompt('Enter admin password:');
+        if (password === 'LEONIS') {
             document.getElementById('adminModal').classList.remove('hidden');
             loadAdminPanel();
         }
-    } else {
-        konamiIndex = 0;
     }
 });
 
