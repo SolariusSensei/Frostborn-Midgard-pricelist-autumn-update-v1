@@ -9,6 +9,15 @@
 </head>
 <body>
 
+    <!-- Visible Admin Section for testing -->
+<div id="admin-test-area" style="margin-top: 50px; padding: 20px; border: 1px solid red;">
+    <h3 style="color: white;">Admin Control Panel</h3>
+    <button onclick="loadAdminPanel()" style="background: green; color: white; padding: 10px;">
+        Load Pending Suggestions
+    </button>
+    <div id="adminPanel" style="color: white; margin-top: 10px;"></div>
+</div>
+    
 <div id="app" class="p-4 lg:p-6 max-w-7xl mx-auto">
     <!-- Loading Overlay -->
 <div id="loadingOverlay" class="fixed inset-0 bg-gray-900/80 z-50 flex items-center justify-center hidden">
