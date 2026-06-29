@@ -28,6 +28,15 @@
     </button>
 </div>
 
+    <!-- This entire section is now invisible to everyone -->
+<div id="admin-only-section">
+    <button onclick="loadAdminPanel()" class="text-xs text-gray-500">Show Pending Prices</button>
+    <div id="adminPanel"></div>
+</div>
+
+<!-- Add this anywhere in your footer, just so YOU have a way to trigger it -->
+<button onclick="unlockAdmin()" class="opacity-10 hover:opacity-100 text-[8px]">...</button>
+    
 <!-- Price Suggestion Modal -->
 <div id="suggestionModal" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center hidden">
     <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 w-full max-w-md shadow-2xl">
