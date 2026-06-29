@@ -624,3 +624,27 @@ window.selectItem = selectItem;
 window.openSuggestionModal = openSuggestionModal;
 window.closeSuggestionModal = closeSuggestionModal;
 window.submitSuggestion = submitSuggestion;
+
+async function loadAdminPanel() {
+    console.log("Loading admin panel...");
+    const { data: suggestions, error } = await supabaseFetch('price_suggestions?status=eq.pending');
+    
+    if (error) {
+        console.error("Error fetching suggestions:", error);
+        return;
+    }
+    
+    const container = document.getElementById('adminPanel');
+    if (!suggestions || suggestions.length === 0) {
+        container.innerHTML = "<p>No pending suggestions.</p>";
+        return;
+    }
+
+    container.innerHTML = suggestions.map(s => `
+        <div style="background: #333; padding: 10px; margin-bottom: 5px;">
+            <p><strong>${s.item_name}</strong> - ${s.suggested_price} LS</p>
+            <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
+                    style="background: blue; color: white; padding: 5px;">Approve</button>
+        </div>
+    `).join('');
+}
