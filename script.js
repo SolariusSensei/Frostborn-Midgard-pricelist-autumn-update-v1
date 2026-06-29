@@ -1,3 +1,11 @@
+// Force the app to use "Main Server" if it can't find one
+async function getActiveServer() {
+    const { data: servers } = await supabaseFetch('servers?limit=1');
+    if (servers && servers.length > 0) {
+        return servers[0];
+    }
+    return null;
+}
 // --- SUPABASE CONFIG ---
 const SUPABASE_URL = 'https://wahedllttsxoraihmwzm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaGVkbGx0dHN4b3JhaWhtd3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjk3NTEsImV4cCI6MjA5ODMwNTc1MX0.lqGNfyUsSZ6ePHz3Li1bjNKiy4mAxk44pHx5I8Qxg50';
