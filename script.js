@@ -91,49 +91,32 @@ async function loadItems() {
 // --- ADMIN FUNCTIONS ---
 async function loadAdminPanel() {
     const container = document.getElementById('adminPanel');
-    container.innerHTML = "Loading..."; // Shows you it's trying
+    container.innerHTML = "Loading...";
+
+    const url = `${SUPABASE_URL}/rest/v1/price_suggestions?status=eq.pending`;
+    console.log("Fetching from:", url);
 
     try {
-        // We add a short timeout to prevent "forever loading"
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds max
-
-        // Fetching with a cleaner URL format
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/price_suggestions?status=eq.pending`, {
-            method: 'GET',
+        const response = await fetch(url, {
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            signal: controller.signal
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            }
         });
 
-        clearTimeout(timeoutId);
+        const text = await response.text(); // Get raw response
+        console.log("Raw Response from Supabase:", text);
 
-        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-        
-        const suggestions = await response.json();
-
-        if (suggestions.length === 0) {
-            container.innerHTML = "No pending suggestions found.";
+        if (!response.ok) {
+            container.innerHTML = "Error: " + response.status;
             return;
         }
-
-        container.innerHTML = suggestions.map(s => `
-            <div class="p-4 bg-gray-800 border border-gray-600 rounded mb-2 flex justify-between">
-                <div>
-                    <p class="font-bold">${s.item_name}</p>
-                    <p class="text-sm">Suggested: ${s.suggested_price} LS</p>
-                </div>
-                <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
-                        class="bg-green-600 px-4 py-2 rounded">Approve</button>
-            </div>
-        `).join('');
-
+        
+        // ... rest of your code ...
     } catch (err) {
-        console.error("Admin Panel Error:", err);
-        container.innerHTML = "Error loading. Check Console (F12).";
+        console.log("Fetch Error:", err);
     }
 }
 
