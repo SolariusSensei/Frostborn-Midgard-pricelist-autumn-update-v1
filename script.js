@@ -1,11 +1,3 @@
-// Force the app to use "Main Server" if it can't find one
-async function getActiveServer() {
-    const { data: servers } = await supabaseFetch('servers?limit=1');
-    if (servers && servers.length > 0) {
-        return servers[0];
-    }
-    return null;
-}
 // --- SUPABASE CONFIG ---
 const SUPABASE_URL = 'https://wahedllttsxoraihmwzm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaGVkbGx0dHN4b3JhaWhtd3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjk3NTEsImV4cCI6MjA5ODMwNTc1MX0.lqGNfyUsSZ6ePHz3Li1bjNKiy4mAxk44pHx5I8Qxg50';
@@ -98,34 +90,20 @@ async function loadItems() {
 
 // --- ADMIN FUNCTIONS ---
 async function loadAdminPanel() {
+    const { data: suggestions } = await supabaseFetch('price_suggestions?status=eq.pending');
+console.log("Suggestions from database:", suggestions);
+    
     const container = document.getElementById('adminPanel');
-    container.innerHTML = "Loading...";
-
-    const url = `${SUPABASE_URL}/rest/v1/price_suggestions?status=eq.pending`;
-    console.log("Fetching from:", url);
-
-    try {
-        const response = await fetch(url, {
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            }
-        });
-
-        const text = await response.text(); // Get raw response
-        console.log("Raw Response from Supabase:", text);
-
-        if (!response.ok) {
-            container.innerHTML = "Error: " + response.status;
-            return;
-        }
-        
-        // ... rest of your code ...
-    } catch (err) {
-        console.log("Fetch Error:", err);
-    }
+    container.innerHTML = suggestions.map(s => `
+        <div class="p-4 bg-gray-800 border border-gray-600 rounded mb-2 flex justify-between">
+            <div>
+                <p class="font-bold">${s.item_name}</p>
+                <p class="text-sm">Suggested: ${s.suggested_price} LS (Reason: ${s.reason || 'None'})</p>
+            </div>
+            <button onclick="approvePrice('${s.id}', '${s.item_name}', ${s.suggested_price})" 
+                    class="bg-green-600 px-4 py-2 rounded">Approve</button>
+        </div>
+    `).join('');
 }
 
 async function approvePrice(suggestionId, itemName, newPrice) {
