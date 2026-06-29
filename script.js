@@ -16,13 +16,21 @@ async function supabaseFetch(endpoint) {
     } catch (e) { console.error(e); return []; }
 }
 
+// --- LOAD SERVERS ---
 async function loadServers() {
-    const servers = await supabaseFetch('servers?select=*&order=name');
-    if (Array.isArray(servers) && servers.length > 0) {
-        const selector = document.getElementById('serverSelector');
-        selector.innerHTML = servers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        currentServerId = servers[0].id;
+    try {
+        console.log("Fetching servers...");
+        // Instead of searching, we use the ID you just confirmed
+        currentServerId = '3cc4e53f-6225-4583-91c3-fcc78e16c28e';
+        
+        console.log("Forcing Server ID to:", currentServerId);
+        
+        // Now load items directly for this ID
         await loadItems();
+        
+        console.log("Items loaded successfully!");
+    } catch (err) {
+        console.error("Error in loadServers:", err);
     }
 }
 
