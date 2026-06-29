@@ -554,5 +554,132 @@ window.onload = async function () {
 
 window.selectItem = selectItem;
 window.openSuggestionModal = openSuggestionModal;
-window.closeSuggestionModal = closeSuggestionModal;
+window.closeSuggestionModal = closeSuggestionModal;}
+// --- ADMIN PANEL ---
+async function loadAdminPanel() {
+    const content = document.getElementById('adminPanelContent');
+    content.innerHTML = 'Loading...';
+
+    const suggestions = await supabaseFetch(
+        `price_suggestions?select=*&status=eq.pending&order=created_at.desc`
+    );
+
+    if (!suggestions.length) {
+        content.innerHTML = '<p class="text-gray-400">No pending suggestions.</p>';
+        return;
+    }
+
+    // Group by item name to show popular ones first
+    const grouped = {};
+    suggestions.forEach(s => {
+        if (!grouped[s.item_name]) grouped[s.item_name] = [];
+        grouped[s.item_name].push(s);
+    });
+
+    let html = '';
+    Object.entries(grouped)
+        .sort((a, b) => b[1].length - a[1].length)
+        .forEach(([itemName, entries]) => {
+            const avgPrice = (entries.reduce((sum, e) => sum + Number(e.suggested_price), 0) / entries.length).toFixed(2);
+            const currentPrice = entries[0].current_price;
+            html += `
+            <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 mb-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-bold text-amber-400">${itemName}</span>
+                    <span class="text-xs text-gray-400">${entries.length} suggestion${entries.length > 1 ? 's' : ''}</span>
+                </div>
+                <div class="text-sm mb-3">
+                    <span class="text-gray-400">Current: </span><span class="text-white">${currentPrice ? formatLS(currentPrice) : 'unknown'}</span>
+                    <span class="text-gray-400 ml-4">Suggested avg: </span><span class="text-green-400">${formatLS(avgPrice)}</span>
+                </div>
+                ${entries.map(e => `
+                    <div class="text-xs text-gray-500 border-t border-gray-700 pt-1 mt-1">
+                        ${formatLS(e.suggested_price)} ${e.reason ? '— ' + e.reason : ''}
+                    </div>
+                `).join('')}
+                <div class="flex gap-2 mt-3">
+                    <button onclick="approvePrice('${itemName}', ${avgPrice})" 
+                        class="flex-1 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-bold rounded transition">
+                        Approve Avg (${formatLS(avgPrice)})
+                    </button>
+                    <button onclick="rejectSuggestions('${itemName}')"
+                        class="flex-1 py-1 bg-red-800 hover:bg-red-700 text-white text-xs font-bold rounded transition">
+                        Reject All
+                    </button>
+                </div>
+            </div>`;
+        });
+
+    content.innerHTML = html;
+}
+
+async function approvePrice(itemName, newPrice) {
+    // Update the item price in the database
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/items?name=eq.${encodeURIComponent(itemName)}&server_id=eq.${currentServerId}`, {
+        method: 'PATCH',
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ price: newPrice })
+    });
+
+    // Mark suggestions as approved
+    await fetch(`${SUPABASE_URL}/rest/v1/price_suggestions?item_name=eq.${encodeURIComponent(itemName)}&status=eq.pending`, {
+        method: 'PATCH',
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ status: 'approved' })
+    });
+
+    if (res.ok) {
+        // Refresh local data
+        await loadItems();
+        await loadAdminPanel();
+    }
+}
+
+async function rejectSuggestions(itemName) {
+    await fetch(`${SUPABASE_URL}/rest/v1/price_suggestions?item_name=eq.${encodeURIComponent(itemName)}&status=eq.pending`, {
+        method: 'PATCH',
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ status: 'rejected' })
+    });
+    await loadAdminPanel();
+}
+
+function closeAdminModal() {
+    document.getElementById('adminModal').classList.add('hidden');
+}
+
+// Konami code to open admin panel — Up Up Down Down Left Right Left Right B A
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiIndex = 0;
+document.addEventListener('keydown', (e) => {
+    if (e.key === KONAMI[konamiIndex]) {
+        konamiIndex++;
+        if (konamiIndex === KONAMI.length) {
+            konamiIndex = 0;
+            document.getElementById('adminModal').classList.remove('hidden');
+            loadAdminPanel();
+        }
+    } else {
+        konamiIndex = 0;
+    }
+});
+
+window.approvePrice = approvePrice;
+window.rejectSuggestions = rejectSuggestions;
+window.closeAdminModal = closeAdminModal;
 window.submitSuggestion = submitSuggestion;
