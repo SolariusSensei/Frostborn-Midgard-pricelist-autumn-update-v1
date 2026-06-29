@@ -8,7 +8,7 @@ async function getActiveServer() {
 }
 // --- SUPABASE CONFIG ---
 const SUPABASE_URL = https://wahedllttsxoraihmwzm.supabase.co/rest/v1/
-const SUPABASE_KEY = eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaGVkbGx0dHN4b3JhaWhtd3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjk3NTEsImV4cCI6MjA5ODMwNTc1MX0.lqGNfyUsSZ6ePHz3Li1bjNKiy4mAxk44pHx5I8Qxg50;
+const SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaGVkbGx0dHN4b3JhaWhtd3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjk3NTEsImV4cCI6MjA5ODMwNTc1MX0.lqGNfyUsSZ6ePHz3Li1bjNKiy4mAxk44pHx5I8Qxg50
 
 // --- STATE ---
 let ITEM_DATABASE = {};
