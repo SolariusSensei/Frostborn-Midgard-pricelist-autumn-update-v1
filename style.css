@@ -27,6 +27,18 @@ body {
     border-bottom-width: 2px;
 }
 
+/* Animated Verdict Box */
+.status-balanced { border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+.status-overpaid { border: 2px solid #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+.status-deficit { border: 2px solid #ef4444; box-shadow: 0 0 15px rgba(239, 68, 84, 0.3); }
+
+/* Smooth hover for search results */
+.search-result-item:hover {
+    background-color: #374151;
+    transform: translateX(5px);
+    transition: all 0.2s ease;
+}
+
 /* Custom Scrollbar for Item Search Results */
 .custom-scrollbar::-webkit-scrollbar { width: 8px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: var(--color-card); }
