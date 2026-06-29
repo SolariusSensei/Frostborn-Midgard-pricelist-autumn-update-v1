@@ -133,6 +133,16 @@ function toggleAdminPanel() {
     }
 }
 
+// Add this to your script.js
+function unlockAdmin() {
+    const password = prompt("Enter Admin Password:");
+    if (password === "Leo123") { // You can change this password to whatever you want
+        document.getElementById('admin-only-section').style.display = 'block';
+    } else {
+        alert("Access Denied.");
+    }
+}
+
 // --- UTILITY FUNCTIONS ---
 function formatLS(value) {
     const numValue = Number(value);
