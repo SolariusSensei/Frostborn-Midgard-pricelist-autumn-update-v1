@@ -726,7 +726,7 @@ async function loadAdminPanel() {
                 </div>
                 <div class="text-sm mb-2">
                     <span class="text-gray-400">Current price: </span>
-                    <span class="text-white">${currentPrice !== null ? formatLS(currentPrice) : 'unknown'}</span>
+                    <span class="text-white">${currentPrice !== null ? formatLS(currentPrice) : 'No current price (new item)'}</span>
                     <span class="text-gray-400 ml-4">Suggested avg: </span>
                     <span class="text-green-400">${formatLS(avgPrice)}</span>
                 </div>
