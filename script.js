@@ -753,31 +753,45 @@ async function loadAdminPanel() {
     content.innerHTML = html;
 }
 
+async function approvePrice(itemName, newPrice) {const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
+
+async function callAdminAction(action, payload) {
+    try {
+        const res = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'apikey': SUPABASE_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: ADMIN_PASSWORD, action, payload })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            console.error('Admin action failed:', data.error);
+            alert(data.error || 'Action failed.');
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.error('callAdminAction failed:', err);
+        return false;
+    }
+}
+
 async function approvePrice(itemName, newPrice) {
-    const encoded = encodeURIComponent(itemName);
-
-    const priceOk = await supabasePatch(
-        `items?name=eq.${encoded}&server_id=eq.${currentServerId}`,
-        { price: newPrice }
-    );
-    const statusOk = await supabasePatch(
-        `price_suggestions?item_name=eq.${encoded}&status=eq.pending`,
-        { status: 'approved' }
-    );
-
-    if (priceOk && statusOk) {
+    const ok = await callAdminAction('approvePrice', {
+        itemName, newPrice, serverId: currentServerId
+    });
+    if (ok) {
         await loadItems();
         await loadAdminPanel();
     }
 }
 
 async function rejectSuggestions(itemName) {
-    const encoded = encodeURIComponent(itemName);
-    await supabasePatch(
-        `price_suggestions?item_name=eq.${encoded}&status=eq.pending`,
-        { status: 'rejected' }
-    );
-    await loadAdminPanel();
+    const ok = await callAdminAction('rejectSuggestions', { itemName });
+    if (ok) await loadAdminPanel();
 }
 
 async function addNewItem(itemName, price) {
@@ -785,19 +799,11 @@ async function addNewItem(itemName, price) {
     const category = document.getElementById(`newCat-${safeId}`).value;
     const rarity   = document.getElementById(`newRar-${safeId}`).value;
 
-    const ok = await supabaseInsert('items', {
-        server_id: currentServerId,
-        name: itemName,
-        price: price,
-        category: category,
-        rarity: rarity
+    const ok = await callAdminAction('addNewItem', {
+        itemName, price, category, rarity, serverId: currentServerId
     });
 
     if (ok) {
-        await supabasePatch(
-            `price_suggestions?item_name=eq.${encodeURIComponent(itemName)}&status=eq.pending`,
-            { status: 'approved' }
-        );
         await loadItems();
         await loadAdminPanel();
     } else {
