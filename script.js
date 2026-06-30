@@ -753,7 +753,7 @@ async function loadAdminPanel() {
     content.innerHTML = html;
 }
 
-async function approvePrice(itemName, newPrice) {const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
+const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
 
 async function callAdminAction(action, payload) {
     try {
