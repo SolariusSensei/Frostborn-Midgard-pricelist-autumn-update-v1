@@ -635,10 +635,6 @@ async function submitSuggestion() {
 // ADMIN PANEL
 // =============================================================
 
-function closeAdminModal() {
-    document.getElementById('adminModal').classList.add('hidden');
-}
-
 async function loadAdminPanel() {
     const content = document.getElementById('adminPanelContent');
     content.innerHTML = '<p class="text-gray-400">Loading...</p>';
@@ -665,6 +661,7 @@ async function loadAdminPanel() {
         const avgPrice  = (entries.reduce((sum, e) => sum + Number(e.suggested_price), 0) / entries.length).toFixed(2);
         const isNewItem = entries.some(e => e.reason && e.reason.startsWith('[NEW ITEM]'));
         const safe      = itemName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const safeId    = itemName.replace(/[^a-zA-Z0-9]/g, '');
 
         if (isNewItem) {
             html += `
@@ -685,7 +682,7 @@ async function loadAdminPanel() {
                     `).join('')}
                 </div>
                 <div class="grid grid-cols-2 gap-2 mb-2">
-                    <select id="newCat-${safe.replace(/[^a-zA-Z0-9]/g,'')}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
+                    <select id="newCat-${safeId}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
                         <option value="W">Weapon</option>
                         <option value="A">Armor Set</option>
                         <option value="P">Armor Piece</option>
@@ -695,7 +692,7 @@ async function loadAdminPanel() {
                         <option value="G">Gadget</option>
                         <option value="K">Key/Collectible</option>
                     </select>
-                    <select id="newRar-${safe.replace(/[^a-zA-Z0-9]/g,'')}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
+                    <select id="newRar-${safeId}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
                         <option value="N">Non-Gear</option>
                         <option value="G">Green</option>
                         <option value="B">Blue</option>
@@ -774,83 +771,6 @@ async function addNewItem(itemName, price) {
     } else {
         alert('Failed to add item — it may already exist.');
     }
-}
-    // Group by item name
-    const grouped = {};
-    suggestions.forEach(s => {
-        if (!grouped[s.item_name]) grouped[s.item_name] = [];
-        grouped[s.item_name].push(s);
-    });
-
-    // Sort by most suggested first
-    const sortedEntries = Object.entries(grouped)
-        .sort((a, b) => b[1].length - a[1].length);
-
-    let html = '';
-    for (const [itemName, entries] of sortedEntries) {
-        const avgPrice    = (entries.reduce((sum, e) => sum + Number(e.suggested_price), 0) / entries.length).toFixed(2);
-        const currentPrice= entries[0].current_price;
-        const safe        = itemName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-
-        html += `
-        <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 mb-3">
-            <div class="flex justify-between items-center mb-2">
-                <span class="font-bold text-amber-400">${itemName}</span>
-                <span class="text-xs text-gray-400">${entries.length} suggestion${entries.length > 1 ? 's' : ''}</span>
-            </div>
-            <div class="text-sm mb-2">
-                <span class="text-gray-400">Current price: </span>
-                <span class="text-white">${currentPrice !== null ? formatLS(currentPrice) : 'unknown'}</span>
-                <span class="text-gray-400 ml-4">Suggested avg: </span>
-                <span class="text-green-400">${formatLS(avgPrice)}</span>
-            </div>
-            <div class="space-y-1 mb-3">
-                ${entries.map(e => `
-                    <div class="text-xs text-gray-500 border-t border-gray-700/50 pt-1">
-                        ${formatLS(e.suggested_price)}${e.reason ? ' — ' + e.reason : ''}
-                    </div>
-                `).join('')}
-            </div>
-            <div class="flex gap-2">
-                <button onclick="approvePrice('${safe}', ${avgPrice})"
-                    class="flex-1 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-bold rounded transition">
-                    Approve Avg (${formatLS(avgPrice)})
-                </button>
-                <button onclick="rejectSuggestions('${safe}')"
-                    class="flex-1 py-1 bg-red-800 hover:bg-red-700 text-white text-xs font-bold rounded transition">
-                    Reject All
-                </button>
-            </div>
-        </div>`;
-    }
-    content.innerHTML = html;
-}
-
-async function approvePrice(itemName, newPrice) {
-    const encoded = encodeURIComponent(itemName);
-
-    const priceOk = await supabasePatch(
-        `items?name=eq.${encoded}&server_id=eq.${currentServerId}`,
-        { price: newPrice }
-    );
-    const statusOk = await supabasePatch(
-        `price_suggestions?item_name=eq.${encoded}&status=eq.pending`,
-        { status: 'approved' }
-    );
-
-    if (priceOk && statusOk) {
-        await loadItems();
-        await loadAdminPanel();
-    }
-}
-
-async function rejectSuggestions(itemName) {
-    const encoded = encodeURIComponent(itemName);
-    await supabasePatch(
-        `price_suggestions?item_name=eq.${encoded}&status=eq.pending`,
-        { status: 'rejected' }
-    );
-    await loadAdminPanel();
 }
 
 // =============================================================
