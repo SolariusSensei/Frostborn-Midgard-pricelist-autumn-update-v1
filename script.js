@@ -641,6 +641,10 @@ function closeAdminModal() {
 }
 
 async function loadAdminPanel() {
+    // ...
+}
+
+async function loadAdminPanel() {
     const content = document.getElementById('adminPanelContent');
     content.innerHTML = '<p class="text-gray-400">Loading...</p>';
 
@@ -753,29 +757,23 @@ async function loadAdminPanel() {
     content.innerHTML = html;
 }
 
-const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
+const EDGE_FUNCTION_URL =
+    'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
 
 async function callAdminAction(action, payload) {
-    try {
-        const res = await fetch(EDGE_FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'apikey': SUPABASE_KEY,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password: ADMIN_PASSWORD, action, payload })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            console.error('Admin action failed:', data.error);
-            alert(data.error || 'Action failed.');
-            return false;
-        }
-        return true;
-    } catch (err) {
-        console.error('callAdminAction failed:', err);
-        return false;
+    // ...
+}
+
+async function approvePrice(itemName, newPrice) {
+    const ok = await callAdminAction('approvePrice', {
+        itemName,
+        newPrice,
+        serverId: currentServerId
+    });
+
+    if (ok) {
+        await loadItems();
+        await loadAdminPanel();
     }
 }
 
