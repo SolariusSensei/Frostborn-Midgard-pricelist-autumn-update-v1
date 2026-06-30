@@ -631,9 +631,14 @@ async function submitSuggestion() {
         statusEl.className   = 'text-red-400 text-sm mt-2';
     }
 }
+
 // =============================================================
 // ADMIN PANEL
 // =============================================================
+
+function closeAdminModal() {
+    document.getElementById('adminModal').classList.add('hidden');
+}
 
 async function loadAdminPanel() {
     const content = document.getElementById('adminPanelContent');
@@ -746,6 +751,33 @@ async function loadAdminPanel() {
         }
     }
     content.innerHTML = html;
+}
+
+async function approvePrice(itemName, newPrice) {
+    const encoded = encodeURIComponent(itemName);
+
+    const priceOk = await supabasePatch(
+        `items?name=eq.${encoded}&server_id=eq.${currentServerId}`,
+        { price: newPrice }
+    );
+    const statusOk = await supabasePatch(
+        `price_suggestions?item_name=eq.${encoded}&status=eq.pending`,
+        { status: 'approved' }
+    );
+
+    if (priceOk && statusOk) {
+        await loadItems();
+        await loadAdminPanel();
+    }
+}
+
+async function rejectSuggestions(itemName) {
+    const encoded = encodeURIComponent(itemName);
+    await supabasePatch(
+        `price_suggestions?item_name=eq.${encoded}&status=eq.pending`,
+        { status: 'rejected' }
+    );
+    await loadAdminPanel();
 }
 
 async function addNewItem(itemName, price) {
@@ -893,12 +925,12 @@ window.onload = async function () {
 };
 
 // Expose globals
-window.selectItem          = selectItem;
-window.openSuggestionModal = openSuggestionModal;
-window.closeSuggestionModal= closeSuggestionModal;
-window.submitSuggestion    = submitSuggestion;
-window.closeAdminModal     = closeAdminModal;
-window.pickSuggestItem = pickSuggestItem;
-window.approvePrice        = approvePrice;
-window.rejectSuggestions   = rejectSuggestions;
-window.addNewItem = addNewItem;
+window.selectItem           = selectItem;
+window.openSuggestionModal  = openSuggestionModal;
+window.closeSuggestionModal = closeSuggestionModal;
+window.submitSuggestion     = submitSuggestion;
+window.pickSuggestItem      = pickSuggestItem;
+window.closeAdminModal      = closeAdminModal;
+window.approvePrice         = approvePrice;
+window.rejectSuggestions    = rejectSuggestions;
+window.addNewItem           = addNewItem;
