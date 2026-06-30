@@ -5,8 +5,9 @@
 // --- SUPABASE CONFIG ---
 const SUPABASE_URL = 'https://iostylnrwoytrbygqbzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlvc3R5bG5yd295dHJieWdxYnp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjYxMTAsImV4cCI6MjA5ODM0MjExMH0.p08MmcHwREicm_k7mA6ZzAL4e1nx0KW5wdaVM_01QOA';
+const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
 
-// --- CHANGE THIS TO YOUR OWN PASSWORD ---
+// --- CHANGE THIS TO YOUR OWN PASSWORD (must match the Edge Function's password) ---
 const ADMIN_PASSWORD = 'LEONIS';
 
 // --- CONSTANTS ---
@@ -25,7 +26,7 @@ let targetState     = { name: '', quantity: 1, level: 0, isBroken: false, armorP
 let offerStates     = [];
 
 // =============================================================
-// SUPABASE HELPERS
+// SUPABASE HELPERS (public read-only)
 // =============================================================
 
 async function supabaseFetch(endpoint) {
@@ -41,25 +42,6 @@ async function supabaseFetch(endpoint) {
     } catch (err) {
         console.error('supabaseFetch failed:', err);
         return [];
-    }
-}
-
-async function supabasePatch(endpoint, data) {
-    try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
-            method: 'PATCH',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(data)
-        });
-        return res.ok;
-    } catch (err) {
-        console.error('supabasePatch failed:', err);
-        return false;
     }
 }
 
@@ -79,6 +61,67 @@ async function supabaseInsert(table, data) {
     } catch (err) {
         console.error('supabaseInsert failed:', err);
         return false;
+    }
+}
+
+// =============================================================
+// SECURE ADMIN ACTIONS (via Edge Function)
+// =============================================================
+
+async function callAdminAction(action, payload) {
+    try {
+        const res = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'apikey': SUPABASE_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: ADMIN_PASSWORD, action, payload })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            console.error('Admin action failed:', data.error);
+            alert(data.error || 'Action failed.');
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.error('callAdminAction failed:', err);
+        alert('Could not reach admin function.');
+        return false;
+    }
+}
+
+async function approvePrice(itemName, newPrice) {
+    const ok = await callAdminAction('approvePrice', {
+        itemName, newPrice, serverId: currentServerId
+    });
+    if (ok) {
+        await loadItems();
+        await loadAdminPanel();
+    }
+}
+
+async function rejectSuggestions(itemName) {
+    const ok = await callAdminAction('rejectSuggestions', { itemName });
+    if (ok) await loadAdminPanel();
+}
+
+async function addNewItem(itemName, price) {
+    const safeId   = itemName.replace(/[^a-zA-Z0-9]/g, '');
+    const category = document.getElementById(`newCat-${safeId}`).value;
+    const rarity   = document.getElementById(`newRar-${safeId}`).value;
+
+    const ok = await callAdminAction('addNewItem', {
+        itemName, price, category, rarity, serverId: currentServerId
+    });
+
+    if (ok) {
+        await loadItems();
+        await loadAdminPanel();
+    } else {
+        alert('Failed to add item — it may already exist.');
     }
 }
 
@@ -188,14 +231,12 @@ function calculateItemLS(itemName, quantity, level, isBroken, armorPiece) {
 }
 
 function updateCalculations() {
-    // Target
     const targetItem = getItemData(targetState.name);
     const targetLS   = targetItem
         ? calculateItemLS(targetState.name, targetState.quantity, targetState.level, targetState.isBroken, targetState.armorPiece)
         : 0;
     document.getElementById('their-total-ls').textContent = formatLS(targetLS);
 
-    // Offer
     let totalOfferLS = 0;
     offerStates.forEach((state, i) => {
         const itemLS = state.name
@@ -207,7 +248,6 @@ function updateCalculations() {
     });
     document.getElementById('your-total-ls').textContent = formatLS(totalOfferLS);
 
-    // Difference
     const liveDiff    = totalOfferLS - targetLS;
     const tolerance   = 0.01;
     const liveDiffEl  = document.getElementById('liveDifference');
@@ -215,14 +255,12 @@ function updateCalculations() {
     liveDiffEl.className   = 'text-3xl font-bold ' +
         (liveDiff > tolerance ? 'text-green-400' : liveDiff < -tolerance ? 'text-red-400' : 'text-gray-300');
 
-    // Balance bar
     const total    = targetLS + totalOfferLS;
     const offerPct = total > 0 ? (totalOfferLS / total) * 100 : 50;
     const targetPct= total > 0 ? (targetLS   / total) * 100 : 50;
     document.getElementById('balanceBarOffer').style.width  = offerPct  + '%';
     document.getElementById('balanceBarTarget').style.width = targetPct + '%';
 
-    // Verdict
     const absDiff  = Math.abs(liveDiff);
     const verdictBox = document.getElementById('verdictBox');
     verdictBox.classList.remove('status-balanced', 'status-overpaid', 'status-deficit');
@@ -506,7 +544,6 @@ function attachOfferSlotListeners() {
     });
 
     container.addEventListener('click', e => {
-        // Remove button
         if (e.target.classList.contains('remove-offer-btn')) {
             const i = parseInt(e.target.dataset.index);
             if (!isNaN(i)) {
@@ -515,7 +552,6 @@ function attachOfferSlotListeners() {
                 document.getElementById('addOfferSlot').disabled = offerStates.length >= 5;
             }
         }
-        // Armor piece buttons
         const pieceBtn = e.target.closest('[data-piece]');
         if (pieceBtn) {
             const group = e.target.closest('.piece-button-group');
@@ -641,10 +677,6 @@ function closeAdminModal() {
 }
 
 async function loadAdminPanel() {
-    // ...
-}
-
-async function loadAdminPanel() {
     const content = document.getElementById('adminPanelContent');
     content.innerHTML = '<p class="text-gray-400">Loading...</p>';
 
@@ -755,58 +787,6 @@ async function loadAdminPanel() {
         }
     }
     content.innerHTML = html;
-}
-
-const EDGE_FUNCTION_URL =
-    'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
-
-async function callAdminAction(action, payload) {
-    // ...
-}
-
-async function approvePrice(itemName, newPrice) {
-    const ok = await callAdminAction('approvePrice', {
-        itemName,
-        newPrice,
-        serverId: currentServerId
-    });
-
-    if (ok) {
-        await loadItems();
-        await loadAdminPanel();
-    }
-}
-
-async function approvePrice(itemName, newPrice) {
-    const ok = await callAdminAction('approvePrice', {
-        itemName, newPrice, serverId: currentServerId
-    });
-    if (ok) {
-        await loadItems();
-        await loadAdminPanel();
-    }
-}
-
-async function rejectSuggestions(itemName) {
-    const ok = await callAdminAction('rejectSuggestions', { itemName });
-    if (ok) await loadAdminPanel();
-}
-
-async function addNewItem(itemName, price) {
-    const safeId   = itemName.replace(/[^a-zA-Z0-9]/g, '');
-    const category = document.getElementById(`newCat-${safeId}`).value;
-    const rarity   = document.getElementById(`newRar-${safeId}`).value;
-
-    const ok = await callAdminAction('addNewItem', {
-        itemName, price, category, rarity, serverId: currentServerId
-    });
-
-    if (ok) {
-        await loadItems();
-        await loadAdminPanel();
-    } else {
-        alert('Failed to add item — it may already exist.');
-    }
 }
 
 // =============================================================
@@ -922,69 +902,6 @@ window.onload = async function () {
         document.getElementById('addOfferSlot').disabled = offerStates.length >= 5;
     });
 
-    if (offerStates.length === 0) document.getElementById('addOfferSlot').click();
-};
-
-// Expose globals
-window.selectItem           = selectItem;
-window.openSuggestionModal  = openSuggestionModal;
-window.closeSuggestionModal = closeSuggestionModal;
-window.submitSuggestion     = submitSuggestion;
-window.pickSuggestItem      = pickSuggestItem;
-window.closeAdminModal      = closeAdminModal;
-window.approvePrice         = approvePrice;
-window.rejectSuggestions    = rejectSuggestions;
-window.addNewItem           = addNewItem;
-
-// =============================================================
-// INIT
-// =============================================================
-
-window.onload = async function () {
-    showLoading(true);
-    await loadServers();
-    showLoading(false);
-
-    // Target listeners
-    document.getElementById('targetSearch').addEventListener('input', e =>
-        handleSearchInput(e, 'targetSearchResults', true));
-
-    document.getElementById('targetQuantity').addEventListener('input', e => {
-        targetState.quantity = parseInt(e.target.value) || 1;
-        updateCalculations();
-    });
-
-    document.getElementById('targetGearControls').addEventListener('input', e => {
-        if (e.target.id === 'targetUpgradeLevel') {
-            targetState.level = parseInt(e.target.value);
-            document.getElementById('targetLevelLabel').textContent = `+${targetState.level}`;
-            updateCalculations();
-        }
-    });
-
-    document.getElementById('targetBrokenToggle').addEventListener('change', e => {
-        targetState.isBroken = e.target.checked;
-        updateCalculations();
-    });
-
-    document.getElementById('targetPieceButtons').addEventListener('click', e => {
-        if (e.target.hasAttribute('data-piece')) {
-            targetState.armorPiece = e.target.dataset.piece;
-            updateGearControls(targetState, null, true);
-            updateCalculations();
-        }
-    });
-
-    // Add offer slot
-    document.getElementById('addOfferSlot').addEventListener('click', () => {
-        if (offerStates.length < 5) {
-            offerStates.push({ name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' });
-            renderOfferSlots();
-        }
-        document.getElementById('addOfferSlot').disabled = offerStates.length >= 5;
-    });
-
-    // Start with one slot
     if (offerStates.length === 0) document.getElementById('addOfferSlot').click();
 };
 
