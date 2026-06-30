@@ -100,17 +100,12 @@
         </div>
 
         <div id="their-offer-panel" class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">THEIR OFFER</h2>
-            <div id="target-slot">
-                <h3 class="text-xl font-semibold mb-3 text-gray-300">What you want to acquire</h3>
-                <div id="targetItemContainer">
-                    <input type="text" id="targetSearch" placeholder="Search for the item you want..." class="w-full p-2 mb-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
-                    <div id="targetSearchResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mb-2 hidden"></div>
-                    <div class="text-sm font-semibold p-2 rounded-md bg-gray-900 border border-gray-700 min-h-[35px] text-gray-400">
-                        <span class="text-xs text-amber-500 block">Selected:</span>
-                        <span id="targetItemNameDisplay">None</span>
-                    </div>
-                </div>
+    <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">THEIR OFFER</h2>
+    <div id="targetSlots" class="space-y-6 max-h-[60vh] lg:max-h-none overflow-y-auto custom-scrollbar pr-2"></div>
+    <button id="addTargetSlot" class="w-full mt-6 py-3 bg-amber-600 rounded-lg font-bold text-white hover:bg-amber-500 transition shadow-lg">
+        Add Item to Their Offer (Max 5)
+    </button>
+</div>
                 <div id="targetControls" class="mt-4">
                     <label class="block text-sm font-medium mb-1 text-gray-400">Quantity</label>
                     <input type="number" id="targetQuantity" min="1" value="1" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
