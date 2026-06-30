@@ -530,24 +530,79 @@ function attachOfferSlotListeners() {
 }
 
 // =============================================================
-// PRICE SUGGESTION MODAL
+// PRICE SUGGESTION MODAL (with autocomplete + new item support)
 // =============================================================
+
+let selectedSuggestItem = null; // tracks if user picked an existing item
 
 function openSuggestionModal() {
     document.getElementById('suggestionModal').classList.remove('hidden');
+    setupSuggestionAutocomplete();
 }
 
 function closeSuggestionModal() {
     document.getElementById('suggestionModal').classList.add('hidden');
     document.getElementById('suggestionForm').reset();
     document.getElementById('suggestionStatus').textContent = '';
+    document.getElementById('newItemNotice').classList.add('hidden');
+    document.getElementById('suggestItemResults').classList.add('hidden');
+    selectedSuggestItem = null;
+}
+
+function setupSuggestionAutocomplete() {
+    const input   = document.getElementById('suggestItemName');
+    const results = document.getElementById('suggestItemResults');
+    const notice  = document.getElementById('newItemNotice');
+
+    // Avoid attaching multiple listeners on repeated opens
+    input.oninput = (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        selectedSuggestItem = null;
+        notice.classList.add('hidden');
+
+        if (query.length < 2) {
+            results.classList.add('hidden');
+            return;
+        }
+
+        const matches = Object.keys(ITEM_DATABASE).filter(n => n.toLowerCase().includes(query));
+
+        if (matches.length === 0) {
+            results.innerHTML = `<div class="p-2 text-sm text-amber-400">No match — this will be submitted as a new item.</div>`;
+            results.classList.remove('hidden');
+            notice.classList.remove('hidden');
+            return;
+        }
+
+        results.innerHTML = matches.map(name => {
+            const data  = getItemData(name);
+            const color = getRarityColor(data.rarity);
+            const safe  = name.replace(/'/g, "\\'");
+            return `
+            <div class="search-result-item" onclick="pickSuggestItem('${safe}')">
+                <div class="search-result-name">
+                    <div class="rarity-dot" style="background-color:${color};"></div>
+                    <span>${name}</span>
+                </div>
+                <span class="search-result-price" style="background-color:${color};">${formatLS(data.price)}</span>
+            </div>`;
+        }).join('');
+        results.classList.remove('hidden');
+    };
+}
+
+function pickSuggestItem(itemName) {
+    selectedSuggestItem = itemName;
+    document.getElementById('suggestItemName').value = itemName;
+    document.getElementById('suggestItemResults').classList.add('hidden');
+    document.getElementById('newItemNotice').classList.add('hidden');
 }
 
 async function submitSuggestion() {
     const itemName       = document.getElementById('suggestItemName').value.trim();
     const suggestedPrice = parseFloat(document.getElementById('suggestPrice').value);
-    const reason         = document.getElementById('suggestReason').value.trim();
-    const statusEl       = document.getElementById('suggestionStatus');
+    const reason          = document.getElementById('suggestReason').value.trim();
+    const statusEl        = document.getElementById('suggestionStatus');
 
     if (!itemName || isNaN(suggestedPrice) || suggestedPrice <= 0) {
         statusEl.textContent = 'Please enter a valid item name and price.';
@@ -556,24 +611,27 @@ async function submitSuggestion() {
     }
 
     const currentItem = getItemData(itemName);
+    const isNewItem    = !currentItem;
+
     const ok = await supabaseInsert('price_suggestions', {
         server_id:       currentServerId,
         item_name:       itemName,
         suggested_price: suggestedPrice,
         current_price:   currentItem ? currentItem.price : null,
-        reason:          reason || null
+        reason:          isNewItem ? `[NEW ITEM] ${reason}` : (reason || null)
     });
 
     if (ok) {
-        statusEl.textContent = 'Suggestion submitted! Thank you.';
-        statusEl.className   = 'text-green-400 text-sm mt-2';
+        statusEl.textContent = isNewItem
+            ? 'New item suggestion submitted for review!'
+            : 'Suggestion submitted! Thank you.';
+        statusEl.className = 'text-green-400 text-sm mt-2';
         setTimeout(closeSuggestionModal, 1500);
     } else {
         statusEl.textContent = 'Something went wrong. Please try again.';
         statusEl.className   = 'text-red-400 text-sm mt-2';
     }
 }
-
 // =============================================================
 // ADMIN PANEL
 // =============================================================
@@ -797,6 +855,7 @@ window.selectItem          = selectItem;
 window.openSuggestionModal = openSuggestionModal;
 window.closeSuggestionModal= closeSuggestionModal;
 window.submitSuggestion    = submitSuggestion;
+window.pickSuggestItem = pickSuggestItem;
 window.closeAdminModal     = closeAdminModal;
 window.approvePrice        = approvePrice;
 window.rejectSuggestions   = rejectSuggestions;
