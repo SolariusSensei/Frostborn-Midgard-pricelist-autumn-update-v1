@@ -652,6 +652,129 @@ async function loadAdminPanel() {
         return;
     }
 
+    const grouped = {};
+    suggestions.forEach(s => {
+        if (!grouped[s.item_name]) grouped[s.item_name] = [];
+        grouped[s.item_name].push(s);
+    });
+
+    const sortedEntries = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
+
+    let html = '';
+    for (const [itemName, entries] of sortedEntries) {
+        const avgPrice  = (entries.reduce((sum, e) => sum + Number(e.suggested_price), 0) / entries.length).toFixed(2);
+        const isNewItem = entries.some(e => e.reason && e.reason.startsWith('[NEW ITEM]'));
+        const safe      = itemName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        if (isNewItem) {
+            html += `
+            <div class="bg-gray-900 p-4 rounded-lg border border-purple-700 mb-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-bold text-purple-400">${itemName} <span class="text-xs">(NEW ITEM)</span></span>
+                    <span class="text-xs text-gray-400">${entries.length} suggestion${entries.length > 1 ? 's' : ''}</span>
+                </div>
+                <div class="text-sm mb-2">
+                    <span class="text-gray-400">Suggested avg price: </span>
+                    <span class="text-green-400">${formatLS(avgPrice)}</span>
+                </div>
+                <div class="space-y-1 mb-3">
+                    ${entries.map(e => `
+                        <div class="text-xs text-gray-500 border-t border-gray-700/50 pt-1">
+                            ${formatLS(e.suggested_price)} — ${(e.reason || '').replace('[NEW ITEM] ', '')}
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="newCat-${safe.replace(/[^a-zA-Z0-9]/g,'')}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
+                        <option value="W">Weapon</option>
+                        <option value="A">Armor Set</option>
+                        <option value="P">Armor Piece</option>
+                        <option value="O">Orb</option>
+                        <option value="R">Resource</option>
+                        <option value="F">Food</option>
+                        <option value="G">Gadget</option>
+                        <option value="K">Key/Collectible</option>
+                    </select>
+                    <select id="newRar-${safe.replace(/[^a-zA-Z0-9]/g,'')}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
+                        <option value="N">Non-Gear</option>
+                        <option value="G">Green</option>
+                        <option value="B">Blue</option>
+                        <option value="P">Purple</option>
+                        <option value="L">Legendary</option>
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="addNewItem('${safe}', ${avgPrice})"
+                        class="flex-1 py-1 bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold rounded transition">
+                        Add as New Item
+                    </button>
+                    <button onclick="rejectSuggestions('${safe}')"
+                        class="flex-1 py-1 bg-red-800 hover:bg-red-700 text-white text-xs font-bold rounded transition">
+                        Reject All
+                    </button>
+                </div>
+            </div>`;
+        } else {
+            const currentPrice = entries[0].current_price;
+            html += `
+            <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 mb-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-bold text-amber-400">${itemName}</span>
+                    <span class="text-xs text-gray-400">${entries.length} suggestion${entries.length > 1 ? 's' : ''}</span>
+                </div>
+                <div class="text-sm mb-2">
+                    <span class="text-gray-400">Current price: </span>
+                    <span class="text-white">${currentPrice !== null ? formatLS(currentPrice) : 'unknown'}</span>
+                    <span class="text-gray-400 ml-4">Suggested avg: </span>
+                    <span class="text-green-400">${formatLS(avgPrice)}</span>
+                </div>
+                <div class="space-y-1 mb-3">
+                    ${entries.map(e => `
+                        <div class="text-xs text-gray-500 border-t border-gray-700/50 pt-1">
+                            ${formatLS(e.suggested_price)}${e.reason ? ' — ' + e.reason : ''}
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="approvePrice('${safe}', ${avgPrice})"
+                        class="flex-1 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-bold rounded transition">
+                        Approve Avg (${formatLS(avgPrice)})
+                    </button>
+                    <button onclick="rejectSuggestions('${safe}')"
+                        class="flex-1 py-1 bg-red-800 hover:bg-red-700 text-white text-xs font-bold rounded transition">
+                        Reject All
+                    </button>
+                </div>
+            </div>`;
+        }
+    }
+    content.innerHTML = html;
+}
+
+async function addNewItem(itemName, price) {
+    const safeId   = itemName.replace(/[^a-zA-Z0-9]/g, '');
+    const category = document.getElementById(`newCat-${safeId}`).value;
+    const rarity   = document.getElementById(`newRar-${safeId}`).value;
+
+    const ok = await supabaseInsert('items', {
+        server_id: currentServerId,
+        name: itemName,
+        price: price,
+        category: category,
+        rarity: rarity
+    });
+
+    if (ok) {
+        await supabasePatch(
+            `price_suggestions?item_name=eq.${encodeURIComponent(itemName)}&status=eq.pending`,
+            { status: 'approved' }
+        );
+        await loadItems();
+        await loadAdminPanel();
+    } else {
+        alert('Failed to add item — it may already exist.');
+    }
+}
     // Group by item name
     const grouped = {};
     suggestions.forEach(s => {
@@ -858,3 +981,4 @@ window.closeAdminModal     = closeAdminModal;
 window.pickSuggestItem = pickSuggestItem;
 window.approvePrice        = approvePrice;
 window.rejectSuggestions   = rejectSuggestions;
+window.addNewItem = addNewItem;
