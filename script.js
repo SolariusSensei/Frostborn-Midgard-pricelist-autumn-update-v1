@@ -533,7 +533,7 @@ function attachOfferSlotListeners() {
 // PRICE SUGGESTION MODAL (with autocomplete + new item support)
 // =============================================================
 
-let selectedSuggestItem = null; // tracks if user picked an existing item
+let selectedSuggestItem = null;
 
 function openSuggestionModal() {
     document.getElementById('suggestionModal').classList.remove('hidden');
@@ -554,7 +554,6 @@ function setupSuggestionAutocomplete() {
     const results = document.getElementById('suggestItemResults');
     const notice  = document.getElementById('newItemNotice');
 
-    // Avoid attaching multiple listeners on repeated opens
     input.oninput = (e) => {
         const query = e.target.value.trim().toLowerCase();
         selectedSuggestItem = null;
