@@ -881,6 +881,66 @@ window.onload = async function () {
     await loadServers();
     showLoading(false);
 
+    document.getElementById('targetSearch').addEventListener('input', e =>
+        handleSearchInput(e, 'targetSearchResults', true));
+
+    document.getElementById('targetQuantity').addEventListener('input', e => {
+        targetState.quantity = parseInt(e.target.value) || 1;
+        updateCalculations();
+    });
+
+    document.getElementById('targetGearControls').addEventListener('input', e => {
+        if (e.target.id === 'targetUpgradeLevel') {
+            targetState.level = parseInt(e.target.value);
+            document.getElementById('targetLevelLabel').textContent = `+${targetState.level}`;
+            updateCalculations();
+        }
+    });
+
+    document.getElementById('targetBrokenToggle').addEventListener('change', e => {
+        targetState.isBroken = e.target.checked;
+        updateCalculations();
+    });
+
+    document.getElementById('targetPieceButtons').addEventListener('click', e => {
+        if (e.target.hasAttribute('data-piece')) {
+            targetState.armorPiece = e.target.dataset.piece;
+            updateGearControls(targetState, null, true);
+            updateCalculations();
+        }
+    });
+
+    document.getElementById('addOfferSlot').addEventListener('click', () => {
+        if (offerStates.length < 5) {
+            offerStates.push({ name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' });
+            renderOfferSlots();
+        }
+        document.getElementById('addOfferSlot').disabled = offerStates.length >= 5;
+    });
+
+    if (offerStates.length === 0) document.getElementById('addOfferSlot').click();
+};
+
+// Expose globals
+window.selectItem           = selectItem;
+window.openSuggestionModal  = openSuggestionModal;
+window.closeSuggestionModal = closeSuggestionModal;
+window.submitSuggestion     = submitSuggestion;
+window.pickSuggestItem      = pickSuggestItem;
+window.closeAdminModal      = closeAdminModal;
+window.approvePrice         = approvePrice;
+window.rejectSuggestions    = rejectSuggestions;
+window.addNewItem           = addNewItem;
+
+// =============================================================
+// INIT
+// =============================================================
+
+window.onload = async function () {
+    showLoading(true);
+    await loadServers();
+    showLoading(false);
+
     // Target listeners
     document.getElementById('targetSearch').addEventListener('input', e =>
         handleSearchInput(e, 'targetSearchResults', true));
