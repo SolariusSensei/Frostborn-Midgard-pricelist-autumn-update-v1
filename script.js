@@ -161,10 +161,20 @@ async function loadAdminPanel() {
         return;
     }
 
-    contentEl.innerHTML = suggestions.map(s => {
-        const exists  = !!getItemData(s.item_name);
-        const safeId  = s.item_name.replace(/[^a-zA-Z0-9]/g, '');
-        const safeName = s.item_name.replace(/'/g, "\\'");
+    // Group suggestions by normalized item name (case-insensitive, trimmed)
+    const groups = {};
+    suggestions.forEach(s => {
+        const key = s.item_name.trim().toLowerCase();
+        if (!groups[key]) groups[key] = { displayName: s.item_name.trim(), items: [] };
+        groups[key].items.push(s);
+    });
+
+    contentEl.innerHTML = Object.values(groups).map(group => {
+        const itemName = group.displayName;
+        const exists   = !!getItemData(itemName);
+        const safeId   = itemName.replace(/[^a-zA-Z0-9]/g, '');
+        const prices   = group.items.map(s => Number(s.suggested_price));
+        const avg      = prices.reduce((a, b) => a + b, 0) / prices.length;
 
         const newItemFields = exists ? '' : `
             <div class="grid grid-cols-2 gap-2 mt-2">
@@ -184,23 +194,35 @@ async function loadAdminPanel() {
                 </select>
             </div>`;
 
-        return `
-        <div class="p-3 bg-gray-900 rounded-lg border border-gray-700">
-            <div class="flex justify-between items-start">
+        const rows = group.items.map(s => {
+            const safeRowName = s.item_name.replace(/'/g, "\\'");
+            return `
+            <div class="flex justify-between items-start py-2 ${group.items.length > 1 ? 'border-t border-gray-800' : ''}">
                 <div>
-                    <p class="font-semibold text-amber-400">${s.item_name}</p>
-                    <p class="text-xs text-gray-400">Suggested: ${formatLS(s.suggested_price)}${exists ? '' : ' (new item)'}</p>
+                    <p class="text-sm text-gray-200">${formatLS(s.suggested_price)}${exists ? '' : ' (new item)'}</p>
                     ${s.reason ? `<p class="text-xs text-gray-500 mt-1">"${s.reason.replace(/</g, '&lt;')}"</p>` : ''}
+                    <p class="text-[10px] text-gray-600 mt-0.5">${new Date(s.created_at).toLocaleString()}</p>
                 </div>
                 <div class="flex gap-2 shrink-0">
                     <button class="px-3 py-1 bg-green-700 hover:bg-green-600 rounded-md text-xs"
-                        onclick="${exists ? `approvePrice('${safeName}', ${s.suggested_price})` : `addNewItem('${safeName}', ${s.suggested_price})`}">
+                        onclick="${exists ? `approvePrice('${safeRowName}', ${s.suggested_price})` : `addNewItem('${safeRowName}', ${s.suggested_price})`}">
                         ${exists ? 'Approve' : 'Add Item'}
                     </button>
                     <button class="px-3 py-1 bg-red-700 hover:bg-red-600 rounded-md text-xs"
-                        onclick="rejectSuggestions('${safeName}')">Reject</button>
+                        onclick="rejectSuggestions('${safeRowName}')">Reject</button>
                 </div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="p-3 bg-gray-900 rounded-lg border border-gray-700">
+            <div class="flex justify-between items-center">
+                <p class="font-semibold text-amber-400">${itemName}</p>
+                ${group.items.length > 1
+                    ? `<span class="text-xs text-gray-500">${group.items.length} suggestions &middot; avg ${formatLS(avg)}</span>`
+                    : ''}
             </div>
+            ${rows}
             ${newItemFields}
         </div>`;
     }).join('');
