@@ -7,6 +7,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://iostylnrwoytrbygqbzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlvc3R5bG5yd295dHJieWdxYnp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjYxMTAsImV4cCI6MjA5ODM0MjExMH0.p08MmcHwREicm_k7mA6ZzAL4e1nx0KW5wdaVM_01QOA';
 const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- CHANGE THIS TO YOUR OWN PASSWORD (must match the Edge Function's password) ---
 const ADMIN_PASSWORD = 'LEONIS';
@@ -71,14 +73,19 @@ async function supabaseInsert(table, data) {
 
 async function callAdminAction(action, payload) {
     try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+            alert('You must be logged in.');
+            return false;
+        }
         const res = await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Authorization': `Bearer ${session.access_token}`,
                 'apikey': SUPABASE_KEY,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ password: ADMIN_PASSWORD, action, payload })
+            body: JSON.stringify({ action, payload })
         });
         const data = await res.json();
         if (!res.ok) {
@@ -89,9 +96,36 @@ async function callAdminAction(action, payload) {
         return true;
     } catch (err) {
         console.error('callAdminAction failed:', err);
-        alert('Could not reach admin function.');
         return false;
     }
+}
+
+async function adminLogin() {
+    const email = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPasswordInput').value;
+    const statusEl = document.getElementById('adminLoginStatus');
+
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    if (error) {
+        statusEl.textContent = error.message;
+        statusEl.className = 'text-red-400 text-sm mb-3';
+        return;
+    }
+
+    closeAdminLoginModal();
+    document.getElementById('adminModal').classList.remove('hidden');
+    loadAdminPanel();
+}
+
+async function adminLogout() {
+    await supabaseClient.auth.signOut();
+    closeAdminModal();
+}
+
+function closeAdminLoginModal() {
+    document.getElementById('adminLoginModal').classList.add('hidden');
+    document.getElementById('adminLoginStatus').textContent = '';
 }
 
 async function approvePrice(itemName, newPrice) {
@@ -801,24 +835,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const trigger = document.getElementById('adminTrigger');
     if (!trigger) return;
 
-    trigger.addEventListener('click', () => {
+    trigger.addEventListener('click', async () => {
         adminClicks++;
         clearTimeout(adminTimer);
         adminTimer = setTimeout(() => { adminClicks = 0; }, 2000);
 
         if (adminClicks >= 3) {
             adminClicks = 0;
-            const pwd = prompt('Admin password:');
-            if (pwd === ADMIN_PASSWORD) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
                 document.getElementById('adminModal').classList.remove('hidden');
                 loadAdminPanel();
-            } else if (pwd !== null) {
-                alert('Incorrect password.');
+            } else {
+                document.getElementById('adminLoginModal').classList.remove('hidden');
             }
         }
     });
 });
-
 // =============================================================
 // ABOUT SECTION
 // =============================================================
@@ -916,3 +949,6 @@ window.closeAdminModal      = closeAdminModal;
 window.approvePrice         = approvePrice;
 window.rejectSuggestions    = rejectSuggestions;
 window.addNewItem           = addNewItem;
+window.adminLogin = adminLogin;
+window.adminLogout = adminLogout;
+window.closeAdminLoginModal = closeAdminLoginModal;
