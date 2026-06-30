@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 // =============================================================
 // MIDGARD BARTER LEDGER — script.js
 // =============================================================
@@ -7,11 +8,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://iostylnrwoytrbygqbzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlvc3R5bG5yd295dHJieWdxYnp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjYxMTAsImV4cCI6MjA5ODM0MjExMH0.p08MmcHwREicm_k7mA6ZzAL4e1nx0KW5wdaVM_01QOA';
 const EDGE_FUNCTION_URL = 'https://iostylnrwoytrbygqbzv.supabase.co/functions/v1/admin-actions';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- CHANGE THIS TO YOUR OWN PASSWORD (must match the Edge Function's password) ---
-const ADMIN_PASSWORD = 'LEONIS';
+// NOTE: There is intentionally no client-side admin password anymore.
+// Admin access is gated by Supabase Auth (email/password sign-in) and the
+// Edge Function verifies the user's session token + role server-side before
+// performing any privileged action. Nothing secret lives in this file.
 
 // --- CONSTANTS ---
 const ARMOR_WEIGHTING = { 'Full Set': 1.00, 'Head': 0.20, 'Chest': 0.30, 'Pants': 0.22, 'Boots': 0.28 };
@@ -21,12 +24,13 @@ const SUGGESTION_ITEMS = [
     "Salt", "Ash Ring", "Blue Bag", "Forge Key",
     "Medium Orb I", "Logi Key", "Archive Key", "Library Key"
 ];
+const MAX_OFFER_SLOTS = 5;
 
 // --- STATE ---
 let ITEM_DATABASE   = {};
 let currentServerId = null;
-let targetState     = { name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' };
-let offerStates     = [];
+let targetState      = { name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' };
+let offerStates      = [];
 
 // =============================================================
 // SUPABASE HELPERS (public read-only)
@@ -68,7 +72,7 @@ async function supabaseInsert(table, data) {
 }
 
 // =============================================================
-// SECURE ADMIN ACTIONS (via Edge Function)
+// SECURE ADMIN ACTIONS (via Edge Function — auth required)
 // =============================================================
 
 async function callAdminAction(action, payload) {
@@ -101,21 +105,23 @@ async function callAdminAction(action, payload) {
 }
 
 async function adminLogin() {
-    const email = document.getElementById('adminEmail').value.trim();
+    const email    = document.getElementById('adminEmail').value.trim();
     const password = document.getElementById('adminPasswordInput').value;
     const statusEl = document.getElementById('adminLoginStatus');
+
+    statusEl.textContent = '';
 
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
     if (error) {
         statusEl.textContent = error.message;
-        statusEl.className = 'text-red-400 text-sm mb-3';
+        statusEl.className   = 'text-red-400 text-sm mb-3';
         return;
     }
 
     closeAdminLoginModal();
     document.getElementById('adminModal').classList.remove('hidden');
-    loadAdminPanel();
+    await loadAdminPanel();
 }
 
 async function adminLogout() {
@@ -123,9 +129,81 @@ async function adminLogout() {
     closeAdminModal();
 }
 
+function openAdminLoginModal() {
+    document.getElementById('adminLoginModal').classList.remove('hidden');
+}
+
 function closeAdminLoginModal() {
     document.getElementById('adminLoginModal').classList.add('hidden');
     document.getElementById('adminLoginStatus').textContent = '';
+    document.getElementById('adminEmail').value = '';
+    document.getElementById('adminPasswordInput').value = '';
+}
+
+function closeAdminModal() {
+    document.getElementById('adminModal').classList.add('hidden');
+}
+
+async function loadAdminPanel() {
+    const contentEl = document.getElementById('adminPanelContent');
+    contentEl.innerHTML = 'Loading...';
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+        contentEl.innerHTML = '<p class="text-red-400">Not logged in.</p>';
+        return;
+    }
+
+    const suggestions = await supabaseFetch('suggestions?select=*&order=created_at.desc');
+
+    if (!suggestions.length) {
+        contentEl.innerHTML = '<p class="text-gray-400">No pending suggestions.</p>';
+        return;
+    }
+
+    contentEl.innerHTML = suggestions.map(s => {
+        const exists  = !!getItemData(s.item_name);
+        const safeId  = s.item_name.replace(/[^a-zA-Z0-9]/g, '');
+        const safeName = s.item_name.replace(/'/g, "\\'");
+
+        const newItemFields = exists ? '' : `
+            <div class="grid grid-cols-2 gap-2 mt-2">
+                <select id="newCat-${safeId}" class="bg-gray-700 border border-gray-600 rounded-md p-1 text-xs">
+                    <option value="W">Weapon</option>
+                    <option value="A">Armor</option>
+                    <option value="P">Piece</option>
+                    <option value="F">Food</option>
+                    <option value="G">General</option>
+                </select>
+                <select id="newRar-${safeId}" class="bg-gray-700 border border-gray-600 rounded-md p-1 text-xs">
+                    <option value="G">Green</option>
+                    <option value="B">Blue</option>
+                    <option value="P">Purple</option>
+                    <option value="L">Legendary</option>
+                    <option value="N">N/A</option>
+                </select>
+            </div>`;
+
+        return `
+        <div class="p-3 bg-gray-900 rounded-lg border border-gray-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="font-semibold text-amber-400">${s.item_name}</p>
+                    <p class="text-xs text-gray-400">Suggested: ${formatLS(s.suggested_price)}${exists ? '' : ' (new item)'}</p>
+                    ${s.reason ? `<p class="text-xs text-gray-500 mt-1">"${s.reason.replace(/</g, '&lt;')}"</p>` : ''}
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button class="px-3 py-1 bg-green-700 hover:bg-green-600 rounded-md text-xs"
+                        onclick="${exists ? `approvePrice('${safeName}', ${s.suggested_price})` : `addNewItem('${safeName}', ${s.suggested_price})`}">
+                        ${exists ? 'Approve' : 'Add Item'}
+                    </button>
+                    <button class="px-3 py-1 bg-red-700 hover:bg-red-600 rounded-md text-xs"
+                        onclick="rejectSuggestions('${safeName}')">Reject</button>
+                </div>
+            </div>
+            ${newItemFields}
+        </div>`;
+    }).join('');
 }
 
 async function approvePrice(itemName, newPrice) {
@@ -165,7 +243,7 @@ async function addNewItem(itemName, price) {
 // =============================================================
 
 async function loadServers() {
-    const servers = await supabaseFetch('servers?select=*&order=name');
+    const servers  = await supabaseFetch('servers?select=*&order=name');
     const selector = document.getElementById('serverSelector');
 
     if (!servers.length) {
@@ -196,15 +274,42 @@ async function loadItems() {
     ITEM_DATABASE = {};
     items.forEach(item => {
         ITEM_DATABASE[item.name] = {
-            price:       Number(item.price),
-            category:    item.category,
-            rarity:      item.rarity,
-            isGear:      ['W', 'A', 'P'].includes(item.category),
-            isArmorSet:  item.category === 'A',
-            isConsumable:['F', 'G'].includes(item.category)
+            price:        Number(item.price),
+            category:     item.category,
+            rarity:       item.rarity,
+            isGear:       ['W', 'A', 'P'].includes(item.category),
+            isArmorSet:   item.category === 'A',
+            isConsumable: ['F', 'G'].includes(item.category)
         };
     });
     populateAboutSection();
+}
+
+function populateAboutSection() {
+    const el = document.getElementById('itemListDisplay');
+    if (!el) return;
+
+    const byCategory = {};
+    Object.entries(ITEM_DATABASE).forEach(([name, data]) => {
+        if (!byCategory[data.category]) byCategory[data.category] = [];
+        byCategory[data.category].push({ name, ...data });
+    });
+
+    const labels = { W: 'Weapons', A: 'Armor', P: 'Pieces', F: 'Food', G: 'General' };
+
+    el.innerHTML = Object.entries(byCategory).map(([cat, items]) => `
+        <div>
+            <h3 class="text-lg font-bold text-amber-400 mb-2">${labels[cat] || cat}</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                ${items.sort((a, b) => a.name.localeCompare(b.name)).map(i => `
+                    <div class="flex justify-between bg-gray-900 px-2 py-1 rounded text-xs">
+                        <span>${i.name}</span>
+                        <span class="text-gray-400">${formatLS(i.price)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
 }
 
 // =============================================================
@@ -283,21 +388,21 @@ function updateCalculations() {
     });
     document.getElementById('your-total-ls').textContent = formatLS(totalOfferLS);
 
-    const liveDiff    = totalOfferLS - targetLS;
-    const tolerance   = 0.01;
-    const liveDiffEl  = document.getElementById('liveDifference');
+    const liveDiff   = totalOfferLS - targetLS;
+    const tolerance  = 0.01;
+    const liveDiffEl = document.getElementById('liveDifference');
     liveDiffEl.textContent = formatLS(liveDiff);
     liveDiffEl.className   = 'text-3xl font-bold ' +
         (liveDiff > tolerance ? 'text-green-400' : liveDiff < -tolerance ? 'text-red-400' : 'text-gray-300');
 
-    const total    = targetLS + totalOfferLS;
-    const offerPct = total > 0 ? (totalOfferLS / total) * 100 : 50;
-    const targetPct= total > 0 ? (targetLS   / total) * 100 : 50;
+    const total     = targetLS + totalOfferLS;
+    const offerPct  = total > 0 ? (totalOfferLS / total) * 100 : 50;
+    const targetPct = total > 0 ? (targetLS   / total) * 100 : 50;
     document.getElementById('balanceBarOffer').style.width  = offerPct  + '%';
     document.getElementById('balanceBarTarget').style.width = targetPct + '%';
 
-    const absDiff  = Math.abs(liveDiff);
-    const verdictBox = document.getElementById('verdictBox');
+    const absDiff     = Math.abs(liveDiff);
+    const verdictBox  = document.getElementById('verdictBox');
     verdictBox.classList.remove('status-balanced', 'status-overpaid', 'status-deficit');
 
     let verdictText = '', suggestionHTML = '', statusClass = 'text-gray-300', balanceText = '';
@@ -320,8 +425,8 @@ function updateCalculations() {
         if (targetItem && targetItem.isConsumable && targetItem.price > 0) {
             const extra = Math.floor(liveDiff / targetItem.price);
             if (extra > 0) {
-                const used  = extra * targetItem.price;
-                const left  = liveDiff - used;
+                const used = extra * targetItem.price;
+                const left = liveDiff - used;
                 suggestionHTML = `Merchant owes you ${formatLS(liveDiff)}. You could take <strong>${extra} more ${targetState.name}</strong> (${formatLS(used)}). Remaining: ${formatLS(left)}.`;
             } else {
                 suggestionHTML = `Merchant owes <strong>${formatLS(liveDiff)}</strong>. Suggested refund items:<br>${suggestItems(liveDiff)}`;
@@ -330,21 +435,21 @@ function updateCalculations() {
             suggestionHTML = `Merchant owes <strong>${formatLS(liveDiff)}</strong>. Suggested refund items:<br>${suggestItems(liveDiff)}`;
         }
     } else {
-        verdictText    = 'DEFICIT — ADD MORE ITEMS';
-        statusClass    = 'text-red-400';
-        balanceText    = 'Your offer is too low! You need to add more.';
-        suggestionHTML = `You are short by <strong>${formatLS(absDiff)}</strong>. Suggested items to add:<br>${suggestItems(absDiff)}`;
+        verdictText     = 'DEFICIT — ADD MORE ITEMS';
+        statusClass     = 'text-red-400';
+        balanceText     = 'Your offer is too low! You need to add more.';
+        suggestionHTML  = `You are short by <strong>${formatLS(absDiff)}</strong>. Suggested items to add:<br>${suggestItems(absDiff)}`;
         verdictBox.classList.add('status-deficit');
     }
 
-    document.getElementById('tradeVerdict').textContent  = verdictText;
-    document.getElementById('tradeVerdict').className    = `text-center text-lg font-semibold ${statusClass}`;
-    document.getElementById('tradeSuggestion').innerHTML = suggestionHTML;
-    document.getElementById('balanceStatusText').textContent = balanceText;
+    document.getElementById('tradeVerdict').textContent       = verdictText;
+    document.getElementById('tradeVerdict').className         = `text-center text-lg font-semibold ${statusClass}`;
+    document.getElementById('tradeSuggestion').innerHTML       = suggestionHTML;
+    document.getElementById('balanceStatusText').textContent   = balanceText;
 }
 
 // =============================================================
-// SUGGESTION ENGINE
+// SUGGESTION ENGINE (refund / deficit item math — NOT the price-suggestion modal)
 // =============================================================
 
 function suggestItems(targetValue) {
@@ -411,19 +516,19 @@ function handleSearchInput(event, resultsId, isTarget) {
 }
 
 function selectItem(itemName, slotId, isTarget) {
-    const item  = getItemData(itemName);
+    const item = getItemData(itemName);
     if (!item) return;
     const state = isTarget ? targetState : offerStates[parseInt(slotId)];
     if (!state) return;
 
-    state.name      = itemName;
-    state.level     = 0;
-    state.isBroken  = false;
-    state.armorPiece= item.isArmorSet ? 'Full Set' : 'N/A';
+    state.name       = itemName;
+    state.level       = 0;
+    state.isBroken     = false;
+    state.armorPiece = item.isArmorSet ? 'Full Set' : 'N/A';
 
-    const nameEl    = isTarget ? 'targetItemNameDisplay'       : `offerItemNameDisplay-${slotId}`;
-    const searchEl  = isTarget ? 'targetSearch'                : `offerSearch-${slotId}`;
-    const resultsEl = isTarget ? 'targetSearchResults'         : `offerSearchResults-${slotId}`;
+    const nameEl    = isTarget ? 'targetItemNameDisplay'  : `offerItemNameDisplay-${slotId}`;
+    const searchEl  = isTarget ? 'targetSearch'           : `offerSearch-${slotId}`;
+    const resultsEl = isTarget ? 'targetSearchResults'    : `offerSearchResults-${slotId}`;
 
     document.getElementById(nameEl).textContent = itemName;
     document.getElementById(searchEl).value     = '';
@@ -465,10 +570,10 @@ function updateGearControls(state, slotId, isTarget) {
         if (groupEl) {
             groupEl.querySelectorAll('[data-piece]').forEach(btn => {
                 const active = btn.dataset.piece === state.armorPiece;
-                btn.classList.toggle('bg-indigo-600',    active);
+                btn.classList.toggle('bg-indigo-600',      active);
                 btn.classList.toggle('hover:bg-indigo-700', active);
-                btn.classList.toggle('bg-gray-700',     !active);
-                btn.classList.toggle('hover:bg-gray-600',!active);
+                btn.classList.toggle('bg-gray-700',        !active);
+                btn.classList.toggle('hover:bg-gray-600',  !active);
             });
         }
     } else {
@@ -476,12 +581,19 @@ function updateGearControls(state, slotId, isTarget) {
     }
 }
 
+function setArmorPiece(piece, slotId, isTarget) {
+    const state = isTarget ? targetState : offerStates[parseInt(slotId)];
+    if (!state) return;
+    state.armorPiece = piece;
+    updateGearControls(state, slotId, isTarget);
+    updateCalculations();
+}
+
 // =============================================================
 // OFFER SLOTS
 // =============================================================
 
 function createOfferSlotHTML(index) {
-    const state = offerStates[index];
     return `
     <div id="offerSlot-${index}" class="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
         <div class="flex justify-between items-center mb-3">
@@ -493,48 +605,46 @@ function createOfferSlotHTML(index) {
         <div id="offerSearchResults-${index}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mb-2 hidden"></div>
         <div class="text-sm font-semibold p-2 rounded-md bg-gray-900 border border-gray-700 min-h-[35px] text-gray-400">
             <span class="text-xs text-amber-500 block">Selected:</span>
-            <span id="offerItemNameDisplay-${index}">${state.name || 'None'}</span>
+            <span id="offerItemNameDisplay-${index}">None</span>
         </div>
-        <div class="flex items-center space-x-4 mt-4">
-            <div class="flex-1">
-                <label class="block text-xs font-medium mb-1 text-gray-400">Quantity</label>
-                <input type="number" id="offerQuantity-${index}" min="1" value="${state.quantity}"
-                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center offer-quantity" data-index="${index}">
-            </div>
-            <div class="flex-1 bg-amber-900/50 p-2 rounded-lg border border-amber-700 text-center">
-                <span class="block text-xs text-gray-400">Total LS</span>
-                <span id="offerLSDisplay-${index}" class="font-bold text-lg text-amber-300">0.00 LS</span>
-            </div>
+        <div class="mt-3">
+            <label class="block text-sm font-medium mb-1 text-gray-400">Quantity</label>
+            <input type="number" id="offerQuantity-${index}" min="1" value="1"
+                class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
         </div>
         <div id="offerGearControls-${index}" class="space-y-3 mt-4 hidden">
             <div class="flex justify-between items-center text-sm font-medium">
                 <span class="text-gray-400">Base LS:</span>
-                <span id="offerBaseLSDisplay-${index}" class="font-bold">0.00 LS</span>
+                <span id="offerBaseLSDisplay-${index}" class="font-bold">0</span>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-400">
+                <label for="offerUpgradeLevel-${index}" class="block text-sm font-medium text-gray-400">
                     Upgrade Level (<span id="offerLevelLabel-${index}">+0</span>)
                 </label>
                 <input type="range" id="offerUpgradeLevel-${index}" min="0" max="0" value="0"
-                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer offer-upgrade" data-index="${index}">
+                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
             </div>
             <div id="offerArmorSelector-${index}" class="hidden">
                 <label class="block text-sm font-medium mb-2 text-gray-400">Select Armor Piece</label>
-                <div data-index="${index}" class="piece-button-group grid grid-cols-2 gap-2 text-xs">
+                <div class="piece-button-group grid grid-cols-2 gap-2 text-xs">
                     <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
-                    <button data-piece="Head"     class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
-                    <button data-piece="Chest"    class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
-                    <button data-piece="Pants"    class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
-                    <button data-piece="Boots"    class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
+                    <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
+                    <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
+                    <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
+                    <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
                 </div>
             </div>
             <div class="flex items-center justify-between">
                 <span class="text-sm font-medium text-gray-400">Broken Status</span>
                 <label class="broken-toggle-switch">
-                    <input type="checkbox" id="offerBrokenToggle-${index}" class="offer-broken" data-index="${index}">
+                    <input type="checkbox" id="offerBrokenToggle-${index}">
                     <span class="broken-slider"></span>
                 </label>
             </div>
+        </div>
+        <div class="text-right mt-3 text-sm">
+            <span class="text-gray-400">Value: </span>
+            <span id="offerLSDisplay-${index}" class="font-bold text-blue-300">0.00 LS</span>
         </div>
     </div>`;
 }
@@ -542,413 +652,236 @@ function createOfferSlotHTML(index) {
 function renderOfferSlots() {
     const container = document.getElementById('offerSlots');
     container.innerHTML = offerStates.map((_, i) => createOfferSlotHTML(i)).join('');
-    offerStates.forEach((state, i) => updateGearControls(state, i, false));
     attachOfferSlotListeners();
-    updateCalculations();
+    document.getElementById('addOfferSlot').disabled = offerStates.length >= MAX_OFFER_SLOTS;
 }
 
 function attachOfferSlotListeners() {
-    const container = document.getElementById('offerSlots');
-    if (!container) return;
+    offerStates.forEach((state, i) => {
+        const searchInput = document.getElementById(`offerSearch-${i}`);
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) =>
+                handleSearchInput(e, `offerSearchResults-${i}`, false));
+        }
 
-    container.addEventListener('input', e => {
-        const t = e.target;
-        if (t.id.startsWith('offerSearch-')) {
-            const i = parseInt(t.id.split('-')[1]);
-            if (!isNaN(i)) handleSearchInput(e, `offerSearchResults-${i}`, false);
-            return;
-        }
-        const i = parseInt(t.dataset.index);
-        if (isNaN(i) || !offerStates[i]) return;
-        if (t.classList.contains('offer-quantity')) {
-            offerStates[i].quantity = parseInt(t.value) || 1;
-        } else if (t.classList.contains('offer-upgrade')) {
-            offerStates[i].level = parseInt(t.value);
-            document.getElementById(`offerLevelLabel-${i}`).textContent = `+${offerStates[i].level}`;
-        }
-        updateCalculations();
-    });
-
-    container.addEventListener('change', e => {
-        const i = parseInt(e.target.dataset.index);
-        if (isNaN(i) || !offerStates[i]) return;
-        if (e.target.classList.contains('offer-broken')) {
-            offerStates[i].isBroken = e.target.checked;
-            updateCalculations();
-        }
-    });
-
-    container.addEventListener('click', e => {
-        if (e.target.classList.contains('remove-offer-btn')) {
-            const i = parseInt(e.target.dataset.index);
-            if (!isNaN(i)) {
-                offerStates.splice(i, 1);
-                renderOfferSlots();
-                document.getElementById('addOfferSlot').disabled = offerStates.length >= 5;
-            }
-        }
-        const pieceBtn = e.target.closest('[data-piece]');
-        if (pieceBtn) {
-            const group = e.target.closest('.piece-button-group');
-            const i     = parseInt(group.dataset.index);
-            if (!isNaN(i) && offerStates[i]) {
-                offerStates[i].armorPiece = pieceBtn.dataset.piece;
-                updateGearControls(offerStates[i], i, false);
+        const qtyInput = document.getElementById(`offerQuantity-${i}`);
+        if (qtyInput) {
+            qtyInput.addEventListener('input', (e) => {
+                state.quantity = Math.max(1, Number(e.target.value) || 1);
                 updateCalculations();
-            }
+            });
         }
+
+        const levelInput = document.getElementById(`offerUpgradeLevel-${i}`);
+        if (levelInput) {
+            levelInput.addEventListener('input', (e) => {
+                state.level = Number(e.target.value) || 0;
+                document.getElementById(`offerLevelLabel-${i}`).textContent = `+${state.level}`;
+                updateCalculations();
+            });
+        }
+
+        const brokenToggle = document.getElementById(`offerBrokenToggle-${i}`);
+        if (brokenToggle) {
+            brokenToggle.addEventListener('change', (e) => {
+                state.isBroken = e.target.checked;
+                updateCalculations();
+            });
+        }
+
+        const armorGroup = document.querySelector(`#offerArmorSelector-${i} .piece-button-group`);
+        if (armorGroup) {
+            armorGroup.querySelectorAll('[data-piece]').forEach(btn => {
+                btn.addEventListener('click', () => setArmorPiece(btn.dataset.piece, i, false));
+            });
+        }
+    });
+
+    container_clickListener();
+}
+
+function container_clickListener() {
+    document.querySelectorAll('.remove-offer-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = Number(e.target.dataset.index);
+            removeOfferSlot(index);
+        });
     });
 }
 
-// =============================================================
-// PRICE SUGGESTION MODAL (with autocomplete + new item support)
-// =============================================================
+function addOfferSlotHandler() {
+    if (offerStates.length >= MAX_OFFER_SLOTS) return;
+    offerStates.push({ name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' });
+    renderOfferSlots();
+    updateCalculations();
+}
 
-let selectedSuggestItem = null;
+function removeOfferSlot(index) {
+    offerStates.splice(index, 1);
+    renderOfferSlots();
+    updateCalculations();
+}
+
+// =============================================================
+// PRICE SUGGESTION MODAL (public, writes to `suggestions` table)
+// =============================================================
 
 function openSuggestionModal() {
     document.getElementById('suggestionModal').classList.remove('hidden');
-    setupSuggestionAutocomplete();
+    document.getElementById('suggestItemName').value = '';
+    document.getElementById('suggestPrice').value     = '';
+    document.getElementById('suggestReason').value    = '';
+    document.getElementById('suggestionStatus').textContent = '';
+    document.getElementById('newItemNotice').classList.add('hidden');
 }
 
 function closeSuggestionModal() {
     document.getElementById('suggestionModal').classList.add('hidden');
-    document.getElementById('suggestionForm').reset();
-    document.getElementById('suggestionStatus').textContent = '';
-    document.getElementById('newItemNotice').classList.add('hidden');
-    document.getElementById('suggestItemResults').classList.add('hidden');
-    selectedSuggestItem = null;
 }
 
-function setupSuggestionAutocomplete() {
-    const input   = document.getElementById('suggestItemName');
-    const results = document.getElementById('suggestItemResults');
-    const notice  = document.getElementById('newItemNotice');
+function handleSuggestItemSearch(event) {
+    const query      = event.target.value.trim().toLowerCase();
+    const resultsDiv = document.getElementById('suggestItemResults');
+    const notice     = document.getElementById('newItemNotice');
 
-    input.oninput = (e) => {
-        const query = e.target.value.trim().toLowerCase();
-        selectedSuggestItem = null;
+    if (query.length < 2) {
+        resultsDiv.classList.add('hidden');
         notice.classList.add('hidden');
+        return;
+    }
 
-        if (query.length < 2) {
-            results.classList.add('hidden');
-            return;
-        }
+    const matches = Object.keys(ITEM_DATABASE).filter(n => n.toLowerCase().includes(query));
+    const exactMatch = Object.keys(ITEM_DATABASE).some(n => n.toLowerCase() === query);
+    notice.classList.toggle('hidden', exactMatch || !query);
 
-        const matches = Object.keys(ITEM_DATABASE).filter(n => n.toLowerCase().includes(query));
+    if (!matches.length) {
+        resultsDiv.classList.add('hidden');
+        return;
+    }
 
-        if (matches.length === 0) {
-            results.innerHTML = `<div class="p-2 text-sm text-amber-400">No match — this will be submitted as a new item.</div>`;
-            results.classList.remove('hidden');
-            notice.classList.remove('hidden');
-            return;
-        }
-
-        results.innerHTML = matches.map(name => {
-            const data  = getItemData(name);
-            const color = getRarityColor(data.rarity);
-            const safe  = name.replace(/'/g, "\\'");
-            return `
-            <div class="search-result-item" onclick="pickSuggestItem('${safe}')">
-                <div class="search-result-name">
-                    <div class="rarity-dot" style="background-color:${color};"></div>
-                    <span>${name}</span>
-                </div>
-                <span class="search-result-price" style="background-color:${color};">${formatLS(data.price)}</span>
-            </div>`;
-        }).join('');
-        results.classList.remove('hidden');
-    };
+    resultsDiv.innerHTML = matches.map(name => {
+        const data  = getItemData(name);
+        const color = getRarityColor(data.rarity);
+        const safe  = name.replace(/'/g, "\\'");
+        return `
+        <div class="search-result-item" onclick="selectSuggestItem('${safe}')">
+            <div class="search-result-name">
+                <div class="rarity-dot" style="background-color:${color};"></div>
+                <span>${name}</span>
+            </div>
+            <span class="search-result-price" style="background-color:${color};">${formatLS(data.price)}</span>
+        </div>`;
+    }).join('');
+    resultsDiv.classList.remove('hidden');
 }
 
-function pickSuggestItem(itemName) {
-    selectedSuggestItem = itemName;
-    document.getElementById('suggestItemName').value = itemName;
+function selectSuggestItem(name) {
+    document.getElementById('suggestItemName').value = name;
     document.getElementById('suggestItemResults').classList.add('hidden');
     document.getElementById('newItemNotice').classList.add('hidden');
 }
 
 async function submitSuggestion() {
-    const itemName       = document.getElementById('suggestItemName').value.trim();
-    const suggestedPrice = parseFloat(document.getElementById('suggestPrice').value);
-    const reason          = document.getElementById('suggestReason').value.trim();
-    const statusEl        = document.getElementById('suggestionStatus');
+    const itemName = document.getElementById('suggestItemName').value.trim();
+    const price    = Number(document.getElementById('suggestPrice').value);
+    const reason   = document.getElementById('suggestReason').value.trim();
+    const statusEl = document.getElementById('suggestionStatus');
 
-    if (!itemName || isNaN(suggestedPrice) || suggestedPrice <= 0) {
+    if (!itemName || !Number.isFinite(price) || price <= 0) {
         statusEl.textContent = 'Please enter a valid item name and price.';
         statusEl.className   = 'text-red-400 text-sm mt-2';
         return;
     }
 
-    const currentItem = getItemData(itemName);
-    const isNewItem    = !currentItem;
-
-    const ok = await supabaseInsert('price_suggestions', {
-        server_id:       currentServerId,
-        item_name:       itemName,
-        suggested_price: suggestedPrice,
-        current_price:   currentItem ? currentItem.price : null,
-        reason:          isNewItem ? `[NEW ITEM] ${reason}` : (reason || null)
+    const ok = await supabaseInsert('suggestions', {
+        item_name: itemName,
+        suggested_price: price,
+        reason: reason || null,
+        server_id: currentServerId
     });
 
     if (ok) {
-        statusEl.textContent = isNewItem
-            ? 'New item suggestion submitted for review!'
-            : 'Suggestion submitted! Thank you.';
-        statusEl.className = 'text-green-400 text-sm mt-2';
-        setTimeout(closeSuggestionModal, 1500);
+        statusEl.textContent = 'Suggestion submitted — thank you!';
+        statusEl.className   = 'text-green-400 text-sm mt-2';
+        setTimeout(closeSuggestionModal, 1200);
     } else {
-        statusEl.textContent = 'Something went wrong. Please try again.';
+        statusEl.textContent = 'Failed to submit suggestion. Please try again.';
         statusEl.className   = 'text-red-400 text-sm mt-2';
     }
-}
-
-// =============================================================
-// ADMIN PANEL
-// =============================================================
-
-function closeAdminModal() {
-    document.getElementById('adminModal').classList.add('hidden');
-}
-
-async function loadAdminPanel() {
-    const content = document.getElementById('adminPanelContent');
-    content.innerHTML = '<p class="text-gray-400">Loading...</p>';
-
-    const suggestions = await supabaseFetch(
-        `price_suggestions?select=*&status=eq.pending&order=created_at.desc`
-    );
-
-    if (!suggestions.length) {
-        content.innerHTML = '<p class="text-gray-400">No pending suggestions.</p>';
-        return;
-    }
-
-    const grouped = {};
-    suggestions.forEach(s => {
-        if (!grouped[s.item_name]) grouped[s.item_name] = [];
-        grouped[s.item_name].push(s);
-    });
-
-    const sortedEntries = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
-
-    let html = '';
-    for (const [itemName, entries] of sortedEntries) {
-        const avgPrice  = (entries.reduce((sum, e) => sum + Number(e.suggested_price), 0) / entries.length).toFixed(2);
-        const isNewItem = entries.some(e => e.reason && e.reason.startsWith('[NEW ITEM]'));
-        const safe      = itemName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        const safeId    = itemName.replace(/[^a-zA-Z0-9]/g, '');
-
-        if (isNewItem) {
-            html += `
-            <div class="bg-gray-900 p-4 rounded-lg border border-purple-700 mb-3">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold text-purple-400">${itemName} <span class="text-xs">(NEW ITEM)</span></span>
-                    <span class="text-xs text-gray-400">${entries.length} suggestion${entries.length > 1 ? 's' : ''}</span>
-                </div>
-                <div class="text-sm mb-2">
-                    <span class="text-gray-400">Suggested avg price: </span>
-                    <span class="text-green-400">${formatLS(avgPrice)}</span>
-                </div>
-                <div class="space-y-1 mb-3">
-                    ${entries.map(e => `
-                        <div class="text-xs text-gray-500 border-t border-gray-700/50 pt-1">
-                            ${formatLS(e.suggested_price)} — ${(e.reason || '').replace('[NEW ITEM] ', '')}
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="grid grid-cols-2 gap-2 mb-2">
-                    <select id="newCat-${safeId}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
-                        <option value="W">Weapon</option>
-                        <option value="A">Armor Set</option>
-                        <option value="P">Armor Piece</option>
-                        <option value="O">Orb</option>
-                        <option value="R">Resource</option>
-                        <option value="F">Food</option>
-                        <option value="G">Gadget</option>
-                        <option value="K">Key/Collectible</option>
-                    </select>
-                    <select id="newRar-${safeId}" class="bg-gray-700 border border-gray-600 rounded text-xs p-1">
-                        <option value="N">Non-Gear</option>
-                        <option value="G">Green</option>
-                        <option value="B">Blue</option>
-                        <option value="P">Purple</option>
-                        <option value="L">Legendary</option>
-                    </select>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="addNewItem('${safe}', ${avgPrice})"
-                        class="flex-1 py-1 bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold rounded transition">
-                        Add as New Item
-                    </button>
-                    <button onclick="rejectSuggestions('${safe}')"
-                        class="flex-1 py-1 bg-red-800 hover:bg-red-700 text-white text-xs font-bold rounded transition">
-                        Reject All
-                    </button>
-                </div>
-            </div>`;
-        } else {
-            const currentPrice = entries[0].current_price;
-            html += `
-            <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 mb-3">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold text-amber-400">${itemName}</span>
-                    <span class="text-xs text-gray-400">${entries.length} suggestion${entries.length > 1 ? 's' : ''}</span>
-                </div>
-                <div class="text-sm mb-2">
-                    <span class="text-gray-400">Current price: </span>
-                    <span class="text-white">${currentPrice !== null ? formatLS(currentPrice) : 'No current price (new item)'}</span>
-                    <span class="text-gray-400 ml-4">Suggested avg: </span>
-                    <span class="text-green-400">${formatLS(avgPrice)}</span>
-                </div>
-                <div class="space-y-1 mb-3">
-                    ${entries.map(e => `
-                        <div class="text-xs text-gray-500 border-t border-gray-700/50 pt-1">
-                            ${formatLS(e.suggested_price)}${e.reason ? ' — ' + e.reason : ''}
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="approvePrice('${safe}', ${avgPrice})"
-                        class="flex-1 py-1 bg-green-700 hover:bg-green-600 text-white text-xs font-bold rounded transition">
-                        Approve Avg (${formatLS(avgPrice)})
-                    </button>
-                    <button onclick="rejectSuggestions('${safe}')"
-                        class="flex-1 py-1 bg-red-800 hover:bg-red-700 text-white text-xs font-bold rounded transition">
-                        Reject All
-                    </button>
-                </div>
-            </div>`;
-        }
-    }
-    content.innerHTML = html;
-}
-
-// =============================================================
-// HIDDEN ADMIN TRIGGER — click bottom-left corner 3 times
-// =============================================================
-
-let adminClicks = 0;
-let adminTimer  = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-    const trigger = document.getElementById('adminTrigger');
-    if (!trigger) return;
-
-    trigger.addEventListener('click', async () => {
-        adminClicks++;
-        clearTimeout(adminTimer);
-        adminTimer = setTimeout(() => { adminClicks = 0; }, 2000);
-
-        if (adminClicks >= 3) {
-            adminClicks = 0;
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                document.getElementById('adminModal').classList.remove('hidden');
-                loadAdminPanel();
-            } else {
-                document.getElementById('adminLoginModal').classList.remove('hidden');
-            }
-        }
-    });
-});
-// =============================================================
-// ABOUT SECTION
-// =============================================================
-
-const ITEM_CATEGORIES = {
-    'Orbs':               ['Small Orb I','Small Orb II','Small Orb III','Medium Orb I','Medium Orb II','Medium Orb III','Large Orb I','Large Orb II','Large Orb III'],
-    'Weapons — Green/Blue':['Green Weapon','Blue Weapons','Ice Club','Ice Crossbow','Ice Dagger','Ice Support Staff','Ice Combat Staff','Ice Shield and Sword'],
-    'Weapons — Purple':   ['Dragon Bite','Dragon Bow','Fire Bow','5-Shot Crossbow','Dragon Combat Staff','Wrath Staff','Reaper Staff','Cutter of Grey Clan','Dragon Dagger','Fire Dagger','Dragon Shield and Sword','Nord Shield and Sword','Dragon Sword','Fire Axe','Cleaver','Giant Hammer','Ice Axe','Protector Spear','Skoll Claws','Ice Scythe',"Hel's Staff",'Dragon Support Staff','Kirga Flask',"Surt's Flask"],
-    'Weapons — Legendary':['THOR Combat Staff','THOR Support Staff','THOR Bow','THOR SNS','THOR Flask','THOR Dagger','THOR Axe','FREYJA Combat Staff','FREYJA Support Staff','FREYJA Crossbow','FREYJA SNS','FREYJA Flask','FREYJA Dagger','FREYJA Mace','ALFAR Combat Staff','ALFAR Support Staff','ALFAR Bow','ALFAR SNS','ALFAR Flask','ALFAR Dagger','ALFAR Axe','ALFAR Mace','ALFAR Spear','ELVEN Combat Staff','ELVEN Support Staff','ELVEN Bow','ELVEN SNS','ELVEN Flask','ELVEN Dagger','ELVEN Spear','YMIR Combat Staff','YMIR Support Staff','YMIR Bow','YMIR SNS','YMIR Flask','YMIR Dagger','YMIR Axe','DWARVEN Combat Staff','DWARVEN Support Staff','DWARVEN Crossbow','DWARVEN SNS','DWARVEN Flask','DWARVEN Dagger','DWARVEN Mace','DWARVEN Axe','BETRAYER Combat Staff','BETRAYER Support Staff','BETRAYER Bow','BETRAYER SNS','BETRAYER Flask','BETRAYER Dagger','BETRAYER Sword','Emperor Sword','Emperor Bow','Emperor Staff','Emperor Crossbow','Master Smith Hammer','Shaman Staff','Retribution Staff','Fire Guardian Crossbow','Valkyrie Lance','Arch Mage Staff','Shadows Dagger','Nosferatu Dagger',"Werewolf's Flask","Wind Mage's Staff",'Bone Mace and Shield',"Ripper's Dagger","Occultist's Flask","Pathfinder's Bow","Protector's Shield and Sword",'Oriental Saber','Thrasher Sword',"Huscarl's Shield and Sword","Hellhound's Sword",'Scythe',"Desert Mage's Staff","Ancestors' Scythe"],
-    'Armor — Purple Helms':['Jorgun Helm','Archivist Helm','Instigator Helm','Instigator Chest','Instigator Pants','Instigator Boots','Dragon Helm','Dragon Chest','Dragon Pants','Dragon Boots','Shaman Helm'],
-    'Armor — Sets Purple': ['Purple Heavy Set','Purple Medium Set','Purple Light Set','Guardian Set','Chaser Set','Magician Set','Jarl Set'],
-    'Armor — Legendary':  ['Warden Set','Scout Set','Sorcerer Set','Heavy Dragon Set','Medium Dragon Set','Light Dragon Set','Barbarian Set','Medium Elven Set','Heavy Elven Set','Light Elven Set','Heavy Betrayer Set','Light Betrayer Set','Medium Betrayer Set','Medium Ymir Set','Heavy Ymir Set','Light Ymir Set','Sand King Set','Light Tribal Set','Witchdoctor Set','Valkyrie Helm','Celestial Dragon Helm',"Protector's Helm","Hellbound's Helm","Occultist's Helm","Huscarl's Helmet","Desert Mage's Turban"],
-    'Resources':          ['Construction Pickaxe','Bucket','Set of Tools','Mortar','Copper Nails','Pine Beam','Sturdy Pine Log','Sturdy Limestone','Limestone Brick','Maple Beam','Oats','Oat Seeds','Premium Fertilizer','Improved Fertilizer','Simple Fertilizer','Sturdy Bones','Ancient Tree Log','Ancient Tree Plank','Magic Clay','Clay Brick','Meteorite Ore','Meteorite Ingot','Ancient Rawhide','Ancient Leather','Exquisite Meat',"Loki's Berrie",'Ghost Essence','Hearth Stone','Salt','Gum','Nectar','Steel Pickaxe','Elven Blood','Elven Tool','Medallion of Power','Medallion Base T1','Medallion Base T2','Medallion of Valor','Medallion of Honor','Drowned Chest'],
-    'Fishing':            ['Season Fish','Common Fish','Uncommon Fish','Rare Fish','Epic Fish','Bait','Fishing Net'],
-    'Food & Potions':     ['Raw Meat','Berries','North Berries','North Meat','Meat','Cooked Food','Goulash','Water Bottle','Carrot','Mushroom Soup','Primrose Soup','Oatmeal','Blood Sausage','Elven Decoction','Healing Pie','Pumpkin Soup','Mead','Mulled Wine','Meat in Honey Sauce','Sushi','Spicy Seafood','Asgardian Honey','Festive Cookies','Fish in Hot Sauce','Ribs','Fish Barbecue','Warrior Elixir','Hunter Elixir','Mage Elixir','Survival Elixir','Speed Potion','Berserk Potion','Shield Potion','Dragon Beer','Dispel Potion','Reflect Potion','Clan Boss Potion','Dexterity Potion','Fury Potion',"Guardian's Potion",'Invisibility Potion','Purification Potion','Elixir of Protector'],
-    'Gadgets & Traps':    ['Bolas','Stun Bomb','Fire Bomb','Throwing Axe','Fire Trap','Stun Hammer','Weakening Dart','Healing Totem','Stun Trap','Bowman Scroll','Barrel Scroll','Healing Bomb','Throwing Cleaver','Fear Trap','Rune Hammer','Improved Bandages','Improved Bolas','Decoy Totem',"Odin's Punishment",'Wall of Fire',"Instigator's Trap",'Thunder Totem','Improved Hammer','Rich Fish Soup'],
-    'Keys & Collectibles':['Wood Pendant','Steel Pendant','Gold Pendant','Magic Pendant','Sanctum Key','Forge Key','Archive Key','Library Key','Ice Vault Key','Logi Key','Ash Ring','Alfar Key','Alfar Key Part 1','Alfar Key Part 2','Labyrinth Key','Blue Bag','Donation Points','Instant Repair Service','Odin Offering']
-};
-
-function populateAboutSection() {
-    let html = '';
-    for (const [title, items] of Object.entries(ITEM_CATEGORIES)) {
-        html += `<h3 class="text-xl font-semibold gold-text mt-4">${title}</h3><ul class="list-none space-y-1">`;
-        for (const name of items) {
-            const data = getItemData(name);
-            if (!data) continue;
-            const color = getRarityColor(data.rarity);
-            html += `
-            <li class="flex justify-between items-center py-1 border-b border-gray-700/50">
-                <span>${name}</span>
-                <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background-color:${color};color:#1f2937;">${formatLS(data.price)}</span>
-            </li>`;
-        }
-        html += '</ul>';
-    }
-    document.getElementById('itemListDisplay').innerHTML = html;
 }
 
 // =============================================================
 // INIT
 // =============================================================
 
-window.onload = async function () {
-    showLoading(true);
-    await loadServers();
-    showLoading(false);
+function attachStaticListeners() {
+    document.getElementById('targetSearch')
+        .addEventListener('input', (e) => handleSearchInput(e, 'targetSearchResults', true));
 
-    document.getElementById('targetSearch').addEventListener('input', e =>
-        handleSearchInput(e, 'targetSearchResults', true));
+    document.getElementById('targetQuantity')
+        .addEventListener('input', (e) => {
+            targetState.quantity = Math.max(1, Number(e.target.value) || 1);
+            updateCalculations();
+        });
 
-    document.getElementById('targetQuantity').addEventListener('input', e => {
-        targetState.quantity = parseInt(e.target.value) || 1;
-        updateCalculations();
-    });
-
-    document.getElementById('targetGearControls').addEventListener('input', e => {
-        if (e.target.id === 'targetUpgradeLevel') {
-            targetState.level = parseInt(e.target.value);
+    document.getElementById('targetUpgradeLevel')
+        .addEventListener('input', (e) => {
+            targetState.level = Number(e.target.value) || 0;
             document.getElementById('targetLevelLabel').textContent = `+${targetState.level}`;
             updateCalculations();
-        }
-    });
+        });
 
-    document.getElementById('targetBrokenToggle').addEventListener('change', e => {
-        targetState.isBroken = e.target.checked;
-        updateCalculations();
-    });
-
-    document.getElementById('targetPieceButtons').addEventListener('click', e => {
-        if (e.target.hasAttribute('data-piece')) {
-            targetState.armorPiece = e.target.dataset.piece;
-            updateGearControls(targetState, null, true);
+    document.getElementById('targetBrokenToggle')
+        .addEventListener('change', (e) => {
+            targetState.isBroken = e.target.checked;
             updateCalculations();
+        });
+
+    document.getElementById('targetPieceButtons')
+        .querySelectorAll('[data-piece]')
+        .forEach(btn => btn.addEventListener('click', () =>
+            setArmorPiece(btn.dataset.piece, null, true)));
+
+    document.getElementById('addOfferSlot').addEventListener('click', addOfferSlotHandler);
+
+    document.getElementById('suggestItemName')
+        .addEventListener('input', handleSuggestItemSearch);
+
+    // Hidden admin trigger: click bottom-left corner 3 times in 2s to open login modal
+    let clickCount = 0;
+    let clickTimer = null;
+    document.getElementById('adminTrigger').addEventListener('click', () => {
+        clickCount++;
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+        if (clickCount >= 3) {
+            clickCount = 0;
+            openAdminLoginModal();
         }
     });
+}
 
-    document.getElementById('addOfferSlot').addEventListener('click', () => {
-        if (offerStates.length < 5) {
-            offerStates.push({ name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' });
-            renderOfferSlots();
-        }
-        document.getElementById('addOfferSlot').disabled = offerStates.length >= 5;
-    });
+// Expose functions used via inline onclick="" in index.html
+window.selectItem          = selectItem;
+window.selectSuggestItem   = selectSuggestItem;
+window.openSuggestionModal = openSuggestionModal;
+window.closeSuggestionModal= closeSuggestionModal;
+window.submitSuggestion    = submitSuggestion;
+window.adminLogin          = adminLogin;
+window.adminLogout         = adminLogout;
+window.closeAdminLoginModal= closeAdminLoginModal;
+window.closeAdminModal     = closeAdminModal;
+window.approvePrice        = approvePrice;
+window.rejectSuggestions   = rejectSuggestions;
+window.addNewItem          = addNewItem;
 
-    if (offerStates.length === 0) document.getElementById('addOfferSlot').click();
-};
+document.addEventListener('DOMContentLoaded', async () => {
+    showLoading(true);
+    attachStaticListeners();
+    await loadServers();
+    resetTrade();
+    showLoading(false);
 
-// Expose globals
-window.selectItem           = selectItem;
-window.openSuggestionModal  = openSuggestionModal;
-window.closeSuggestionModal = closeSuggestionModal;
-window.submitSuggestion     = submitSuggestion;
-window.pickSuggestItem      = pickSuggestItem;
-window.closeAdminModal      = closeAdminModal;
-window.approvePrice         = approvePrice;
-window.rejectSuggestions    = rejectSuggestions;
-window.addNewItem           = addNewItem;
-window.adminLogin = adminLogin;
-window.adminLogout = adminLogout;
-window.closeAdminLoginModal = closeAdminLoginModal;
+    // If an admin is already mid-session (e.g. page refresh), keep them logged in
+    // without re-showing the login modal — but never auto-open the admin panel.
+});
