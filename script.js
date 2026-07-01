@@ -31,8 +31,12 @@ let ITEM_DATABASE   = {};
 let currentServerId = null;
 let targetState      = { name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' };
 let offerStates      = [];
-let quickRows        = []; // Quick Valuation rows — no cap on length
+let quickRows        = []; // Quick Valuation rows (seller's stack) — no cap on length
 let quickRowSeq      = 0;  // stable unique id counter for quick rows (independent of array index)
+let myItems           = []; // "Your Items To Offer" rows — no cap on length
+let myItemSeq         = 0;  // stable unique id counter for my-item rows
+let sellerTargetLS    = 0;  // last computed seller stack total, shared with the offer suggestion
+let myItemsTotalValue = 0;  // last computed total of everything in "Your Items To Offer"
 
 // =============================================================
 // SUPABASE HELPERS (public read-only)
@@ -987,6 +991,9 @@ function updateQuickTotal() {
     const rowsWithItems = quickRows.filter(r => r.name).length;
     document.getElementById('quickItemCount').textContent =
         `${rowsWithItems} item type${rowsWithItems === 1 ? '' : 's'} · ${itemCount} total unit${itemCount === 1 ? '' : 's'}`;
+
+    sellerTargetLS = total;
+    updateSuggestedOffer();
 }
 
 function addQuickRowHandler() {
@@ -1016,6 +1023,432 @@ function resetQuickValuation() {
     renderQuickRows();
     updateQuickTotal();
     addQuickRowHandler();
+    resetMyItems();
+}
+
+// =============================================================
+// "YOUR ITEMS TO OFFER" ROWS
+// ---------------------------------------------------------------
+// This is the piece that turns a bare valuation number into an
+// actual path to a trade: list what you personally have available,
+// and the Suggested Offer engine below figures out what to actually
+// hand over. No cap on rows, mirrors the seller-side row UI.
+// =============================================================
+
+function createMyItemRowHTML(row) {
+    const id = row.id;
+    return `
+    <div id="myItemRow-${id}" class="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-start">
+            <div class="flex-1 relative">
+                <label class="block text-xs font-medium mb-1 text-gray-400">Item</label>
+                <input type="text" id="mySearch-${id}" placeholder="Search for item..." autocomplete="off"
+                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+                <div id="mySearchResults-${id}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
+                <div class="text-sm font-semibold mt-2">
+                    <span id="myItemNameDisplay-${id}" class="text-gray-200">No item selected</span>
+                </div>
+            </div>
+            <div class="w-full sm:w-28 shrink-0">
+                <label class="block text-xs font-medium mb-1 text-gray-400">You Have</label>
+                <input type="number" id="myQuantity-${id}" min="1" value="1"
+                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
+            </div>
+            <div class="w-full sm:w-32 shrink-0 text-left sm:text-right">
+                <label class="block text-xs font-medium mb-1 text-gray-400 sm:invisible">Value</label>
+                <span id="myLSDisplay-${id}" class="font-bold text-blue-300 text-lg">0.00 LS</span>
+            </div>
+            <button data-id="${id}" class="remove-my-item-btn text-red-500 hover:text-red-400 text-sm font-bold shrink-0 sm:pt-6">
+                Remove
+            </button>
+        </div>
+
+        <div id="myGearControls-${id}" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-800 hidden">
+            <div class="flex justify-between items-center text-sm font-medium sm:col-span-2">
+                <span class="text-gray-400">Base LS:</span>
+                <span id="myBaseLSDisplay-${id}" class="font-bold">0</span>
+            </div>
+            <div>
+                <label for="myUpgradeLevel-${id}" class="block text-xs font-medium text-gray-400">
+                    Upgrade Level (<span id="myLevelLabel-${id}">+0</span>)
+                </label>
+                <input type="range" id="myUpgradeLevel-${id}" min="0" max="0" value="0"
+                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-400">Broken</span>
+                <label class="broken-toggle-switch">
+                    <input type="checkbox" id="myBrokenToggle-${id}">
+                    <span class="broken-slider"></span>
+                </label>
+            </div>
+            <div id="myArmorSelector-${id}" class="hidden sm:col-span-2">
+                <label class="block text-xs font-medium mb-2 text-gray-400">Select Armor Piece</label>
+                <div class="my-piece-button-group grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                    <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
+                    <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
+                    <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
+                    <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
+                    <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderMyItemRows() {
+    const container = document.getElementById('myItemRows');
+    if (!myItems.length) {
+        container.innerHTML = '<p class="text-gray-500 text-sm text-center py-6">No items yet — click "+ Add Item" to list what you have available to trade.</p>';
+    } else {
+        container.innerHTML = myItems.map(createMyItemRowHTML).join('');
+    }
+    attachMyItemRowListeners();
+}
+
+function attachMyItemRowListeners() {
+    myItems.forEach((row) => {
+        const id = row.id;
+
+        const searchInput = document.getElementById(`mySearch-${id}`);
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => handleMySearchInput(e, id));
+        }
+
+        const qtyInput = document.getElementById(`myQuantity-${id}`);
+        if (qtyInput) {
+            qtyInput.addEventListener('input', (e) => {
+                row.quantity = Math.max(1, Number(e.target.value) || 1);
+                updateMyItemsTotal();
+            });
+        }
+
+        const levelInput = document.getElementById(`myUpgradeLevel-${id}`);
+        if (levelInput) {
+            levelInput.addEventListener('input', (e) => {
+                row.level = Number(e.target.value) || 0;
+                document.getElementById(`myLevelLabel-${id}`).textContent = `+${row.level}`;
+                updateMyItemsTotal();
+            });
+        }
+
+        const brokenToggle = document.getElementById(`myBrokenToggle-${id}`);
+        if (brokenToggle) {
+            brokenToggle.addEventListener('change', (e) => {
+                row.isBroken = e.target.checked;
+                updateMyItemsTotal();
+            });
+        }
+
+        const armorGroup = document.querySelector(`#myArmorSelector-${id} .my-piece-button-group`);
+        if (armorGroup) {
+            armorGroup.querySelectorAll('[data-piece]').forEach(btn => {
+                btn.addEventListener('click', () => setMyArmorPiece(btn.dataset.piece, id));
+            });
+        }
+
+        const removeBtn = document.querySelector(`.remove-my-item-btn[data-id="${id}"]`);
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => removeMyItemRow(id));
+        }
+    });
+}
+
+function handleMySearchInput(event, id) {
+    const query      = event.target.value.trim().toLowerCase();
+    const resultsDiv = document.getElementById(`mySearchResults-${id}`);
+    if (query.length < 2) { resultsDiv.classList.add('hidden'); return; }
+
+    const matches = Object.keys(ITEM_DATABASE).filter(n => n.toLowerCase().includes(query));
+    if (!matches.length) {
+        resultsDiv.innerHTML = '<div class="p-2 text-sm text-gray-400">No items found.</div>';
+        resultsDiv.classList.remove('hidden');
+        return;
+    }
+
+    resultsDiv.innerHTML = matches.map(name => {
+        const data  = getItemData(name);
+        const color = getRarityColor(data.rarity);
+        const safe  = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
+        <div class="search-result-item" onclick="selectMyItem('${safe}', ${id})">
+            <div class="search-result-name">
+                <div class="rarity-dot" style="background-color:${color};"></div>
+                <span>${name}</span>
+            </div>
+            <span class="search-result-price" style="background-color:${color};">${formatLS(data.price)}</span>
+        </div>`;
+    }).join('');
+    resultsDiv.classList.remove('hidden');
+}
+
+function selectMyItem(itemName, id) {
+    const item = getItemData(itemName);
+    if (!item) return;
+    const row = myItems.find(r => r.id === id);
+    if (!row) return;
+
+    row.name       = itemName;
+    row.level      = 0;
+    row.isBroken   = false;
+    row.armorPiece = item.isArmorSet ? 'Full Set' : 'N/A';
+
+    document.getElementById(`myItemNameDisplay-${id}`).textContent = itemName;
+    document.getElementById(`myItemNameDisplay-${id}`).classList.add('text-blue-300');
+    document.getElementById(`mySearch-${id}`).value = '';
+    document.getElementById(`mySearchResults-${id}`).classList.add('hidden');
+
+    updateMyItemGearControls(row);
+    updateMyItemsTotal();
+}
+
+function updateMyItemGearControls(row) {
+    const item   = getItemData(row.name);
+    const id     = row.id;
+    const gearEl = document.getElementById(`myGearControls-${id}`);
+    if (!gearEl) return;
+
+    if (!item || !item.isGear) { gearEl.classList.add('hidden'); return; }
+    gearEl.classList.remove('hidden');
+
+    document.getElementById(`myBaseLSDisplay-${id}`).textContent = formatLS(item.price);
+
+    const maxLevel   = UPGRADE_LIMITS[item.rarity] || 0;
+    const levelInput = document.getElementById(`myUpgradeLevel-${id}`);
+    levelInput.max   = maxLevel;
+    row.level        = Math.min(Number(row.level) || 0, maxLevel);
+    levelInput.value = row.level;
+    document.getElementById(`myLevelLabel-${id}`).textContent = `+${row.level}`;
+    document.getElementById(`myBrokenToggle-${id}`).checked = row.isBroken;
+
+    const armorEl = document.getElementById(`myArmorSelector-${id}`);
+    if (item.isArmorSet) {
+        armorEl.classList.remove('hidden');
+        const groupEl = document.querySelector(`#myArmorSelector-${id} .my-piece-button-group`);
+        if (groupEl) {
+            groupEl.querySelectorAll('[data-piece]').forEach(btn => {
+                const active = btn.dataset.piece === row.armorPiece;
+                btn.classList.toggle('bg-indigo-600',      active);
+                btn.classList.toggle('hover:bg-indigo-700', active);
+                btn.classList.toggle('bg-gray-700',        !active);
+                btn.classList.toggle('hover:bg-gray-600',  !active);
+            });
+        }
+    } else {
+        armorEl.classList.add('hidden');
+    }
+}
+
+function setMyArmorPiece(piece, id) {
+    const row = myItems.find(r => r.id === id);
+    if (!row) return;
+    row.armorPiece = piece;
+    updateMyItemGearControls(row);
+    updateMyItemsTotal();
+}
+
+function updateMyItemsTotal() {
+    let total = 0;
+
+    myItems.forEach(row => {
+        const itemLS = row.name
+            ? calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece)
+            : 0;
+        total += itemLS;
+        const display = document.getElementById(`myLSDisplay-${row.id}`);
+        if (display) display.textContent = formatLS(itemLS);
+    });
+
+    document.getElementById('myItemsTotalLS').textContent = formatLS(total);
+    myItemsTotalValue = total;
+    updateSuggestedOffer();
+}
+
+function addMyItemRowHandler() {
+    myItemSeq += 1;
+    myItems.push({ id: myItemSeq, name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' });
+    renderMyItemRows();
+    updateMyItemsTotal();
+}
+
+function removeMyItemRow(id) {
+    myItems = myItems.filter(r => r.id !== id);
+    renderMyItemRows();
+    updateMyItemsTotal();
+}
+
+function clearMyItemsHandler() {
+    if (myItems.length && !confirm('Clear all of your offer items?')) return;
+    myItems = [];
+    renderMyItemRows();
+    updateMyItemsTotal();
+    addMyItemRowHandler();
+}
+
+function resetMyItems() {
+    myItems   = [];
+    myItemSeq = 0;
+    renderMyItemRows();
+    updateMyItemsTotal();
+    addMyItemRowHandler();
+}
+
+// =============================================================
+// SUGGESTED OFFER ENGINE
+// ---------------------------------------------------------------
+// Given the seller's total (sellerTargetLS) and everything listed
+// in "Your Items To Offer", picks a combination of your items that
+// covers the seller's ask as closely as possible without handing
+// over more than necessary. If your full inventory can't reach the
+// target, it says so up front — with the exact shortfall — instead
+// of you finding out mid-negotiation.
+//
+// This is a greedy bounded-knapsack approximation (sort by unit
+// price, fill toward the target, then fine-tune with one closing
+// unit), not a guaranteed-optimal solver — but it gets close and is
+// instant, which is what matters when you're staring at a seller's
+// list deciding whether to even bother.
+// =============================================================
+
+function computeBestOffer(target, pool) {
+    // pool: [{ name, price (per unit, post upgrade/broken/armor), availableQty }]
+    const working = pool
+        .filter(it => it.price > 0 && it.availableQty > 0)
+        .map(it => ({ ...it, used: 0 }))
+        .sort((a, b) => b.price - a.price);
+
+    let total = 0;
+
+    // Greedy fill: take as much of the priciest items as fits without overshooting
+    for (const it of working) {
+        if (total >= target) break;
+        const remaining    = target - total;
+        const maxByRemain  = Math.floor(remaining / it.price);
+        const take         = Math.min(it.availableQty, maxByRemain);
+        if (take > 0) {
+            it.used += take;
+            total   += take * it.price;
+        }
+    }
+
+    // Close the remaining gap with whichever single available unit lands closest to target
+    const gap = target - total;
+    if (gap > 0.01) {
+        let bestPick = null;
+        let bestDiff = Math.abs(gap);
+        for (const it of working) {
+            if (it.used < it.availableQty) {
+                const diff = Math.abs((total + it.price) - target);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestPick = it;
+                }
+            }
+        }
+        if (bestPick) {
+            bestPick.used += 1;
+            total += bestPick.price;
+        }
+    }
+
+    const selection = working
+        .filter(it => it.used > 0)
+        .map(it => ({ name: it.name, qty: it.used, value: it.used * it.price }));
+
+    return { selection, totalValue: total };
+}
+
+function updateSuggestedOffer() {
+    const emptyEl = document.getElementById('offerSuggestionEmpty');
+    const bodyEl  = document.getElementById('offerSuggestionBody');
+
+    const hasSellerItems = quickRows.some(r => r.name);
+    const hasMyItems     = myItems.some(r => r.name);
+
+    if (!hasSellerItems || !hasMyItems) {
+        emptyEl.classList.remove('hidden');
+        bodyEl.classList.add('hidden');
+        return;
+    }
+
+    emptyEl.classList.add('hidden');
+    bodyEl.classList.remove('hidden');
+
+    const pool = myItems
+        .filter(r => r.name)
+        .map(r => ({
+            name: r.name,
+            price: calculateItemLS(r.name, 1, r.level, r.isBroken, r.armorPiece),
+            availableQty: r.quantity
+        }));
+
+    const target = sellerTargetLS;
+    const canAfford = myItemsTotalValue >= target - 0.01;
+
+    let selection, totalValue;
+    if (!canAfford) {
+        // Can't fully cover it — suggest everything you have
+        selection  = pool.filter(it => it.availableQty > 0).map(it => ({
+            name: it.name, qty: it.availableQty, value: it.price * it.availableQty
+        }));
+        totalValue = myItemsTotalValue;
+    } else {
+        const result = computeBestOffer(target, pool);
+        selection  = result.selection;
+        totalValue = result.totalValue;
+    }
+
+    const diff     = totalValue - target;
+    const coverage = target > 0 ? Math.min(100, (totalValue / target) * 100) : 100;
+
+    document.getElementById('suggestTargetLS').textContent = formatLS(target);
+    document.getElementById('suggestOfferLS').textContent  = formatLS(totalValue);
+
+    const diffEl  = document.getElementById('suggestDiffLS');
+    const diffBox = document.getElementById('suggestDiffBox');
+    diffEl.textContent = (diff >= 0 ? '+' : '') + formatLS(diff);
+    diffBox.classList.remove('border-green-700', 'border-red-700', 'border-gray-700');
+    diffEl.classList.remove('text-green-400', 'text-red-400', 'text-gray-300');
+    if (diff >= -0.01 && Math.abs(diff) < 0.01) {
+        diffBox.classList.add('border-green-700');
+        diffEl.classList.add('text-green-400');
+    } else if (diff < 0) {
+        diffBox.classList.add('border-red-700');
+        diffEl.classList.add('text-red-400');
+    } else {
+        diffBox.classList.add('border-gray-700');
+        diffEl.classList.add('text-gray-300');
+    }
+
+    const coverageBar = document.getElementById('suggestCoverageBar');
+    coverageBar.style.width = coverage + '%';
+    coverageBar.style.backgroundColor = canAfford ? 'var(--color-gear-blue)' : '#ef4444';
+    document.getElementById('suggestCoverageText').textContent =
+        `${coverage.toFixed(0)}% of seller's ask covered`;
+
+    const warningEl = document.getElementById('suggestWarning');
+    if (!canAfford) {
+        warningEl.classList.remove('hidden');
+        warningEl.textContent =
+            `Even offering everything you've listed, you're short by ${formatLS(target - totalValue)}. `
+            + `Add more items to "Your Items To Offer," or use this as a starting point to negotiate a partial trade.`;
+    } else {
+        warningEl.classList.add('hidden');
+    }
+
+    const listEl = document.getElementById('suggestItemList');
+    if (!selection.length) {
+        listEl.innerHTML = '<p class="text-gray-500">No items to suggest.</p>';
+    } else {
+        listEl.innerHTML = selection
+            .sort((a, b) => b.value - a.value)
+            .map(s => `
+                <div class="flex justify-between items-center bg-gray-900 px-3 py-2 rounded-md">
+                    <span><strong>${s.qty}x</strong> ${s.name}</span>
+                    <span class="text-blue-300 font-semibold">${formatLS(s.value)}</span>
+                </div>`)
+            .join('');
+    }
 }
 
 // =============================================================
@@ -1173,6 +1606,9 @@ function attachStaticListeners() {
     document.getElementById('addQuickRow').addEventListener('click', addQuickRowHandler);
     document.getElementById('clearQuickRows').addEventListener('click', clearQuickRowsHandler);
 
+    document.getElementById('addMyItemRow').addEventListener('click', addMyItemRowHandler);
+    document.getElementById('clearMyItems').addEventListener('click', clearMyItemsHandler);
+
     document.getElementById('suggestItemName')
         .addEventListener('input', handleSuggestItemSearch);
 
@@ -1194,6 +1630,7 @@ function attachStaticListeners() {
 window.selectItem          = selectItem;
 window.selectSuggestItem   = selectSuggestItem;
 window.selectQuickItem     = selectQuickItem;
+window.selectMyItem        = selectMyItem;
 window.switchTab           = switchTab;
 window.openSuggestionModal = openSuggestionModal;
 window.closeSuggestionModal= closeSuggestionModal;
