@@ -115,41 +115,44 @@
         </div>
 
         <div id="their-offer-panel" class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-    <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">THEIR OFFER</h2>
-    <div id="targetSlots" class="space-y-6 max-h-[60vh] lg:max-h-none overflow-y-auto custom-scrollbar pr-2"></div>
-    <button id="addTargetSlot" class="w-full mt-6 py-3 bg-amber-600 rounded-lg font-bold text-white hover:bg-amber-500 transition shadow-lg">
-        Add Item to Their Offer (Max 5)
-    </button>
-</div>
-                <div id="targetControls" class="mt-4">
-                    <label class="block text-sm font-medium mb-1 text-gray-400">Quantity</label>
-                    <input type="number" id="targetQuantity" min="1" value="1" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
-                    <div id="targetGearControls" class="space-y-3 mt-4 hidden">
-                        <div class="flex justify-between items-center text-sm font-medium">
-                            <span class="text-gray-400">Base LS:</span>
-                            <span id="targetBaseLSDisplay" class="font-bold">0</span>
+            <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">THEIR OFFER</h2>
+
+            <input type="text" id="targetSearch" placeholder="Search for Item..." autocomplete="off"
+                class="w-full p-2 mb-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+            <div id="targetSearchResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mb-2 hidden"></div>
+            <div class="text-sm font-semibold p-2 rounded-md bg-gray-900 border border-gray-700 min-h-[35px] text-gray-400">
+                <span class="text-xs text-amber-500 block">Selected:</span>
+                <span id="targetItemNameDisplay">None</span>
+            </div>
+
+            <div id="targetControls" class="mt-4">
+                <label class="block text-sm font-medium mb-1 text-gray-400">Quantity</label>
+                <input type="number" id="targetQuantity" min="1" value="1" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
+                <div id="targetGearControls" class="space-y-3 mt-4 hidden">
+                    <div class="flex justify-between items-center text-sm font-medium">
+                        <span class="text-gray-400">Base LS:</span>
+                        <span id="targetBaseLSDisplay" class="font-bold">0</span>
+                    </div>
+                    <div>
+                        <label for="targetUpgradeLevel" class="block text-sm font-medium text-gray-400">Upgrade Level (<span id="targetLevelLabel">+0</span>)</label>
+                        <input type="range" id="targetUpgradeLevel" min="0" max="0" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                    </div>
+                    <div id="targetArmorSelector" class="hidden">
+                        <label class="block text-sm font-medium mb-2 text-gray-400">Select Armor Piece</label>
+                        <div id="targetPieceButtons" class="grid grid-cols-2 gap-2 text-xs">
+                            <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
+                            <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
+                            <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
+                            <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
+                            <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
                         </div>
-                        <div>
-                            <label for="targetUpgradeLevel" class="block text-sm font-medium text-gray-400">Upgrade Level (<span id="targetLevelLabel">+0</span>)</label>
-                            <input type="range" id="targetUpgradeLevel" min="0" max="0" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
-                        </div>
-                        <div id="targetArmorSelector" class="hidden">
-                            <label class="block text-sm font-medium mb-2 text-gray-400">Select Armor Piece</label>
-                            <div id="targetPieceButtons" class="grid grid-cols-2 gap-2 text-xs">
-                                <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
-                                <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
-                                <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
-                                <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
-                                <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-medium text-gray-400">Broken Status</span>
-                            <label class="broken-toggle-switch">
-                                <input type="checkbox" id="targetBrokenToggle">
-                                <span class="broken-slider"></span>
-                            </label>
-                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-400">Broken Status</span>
+                        <label class="broken-toggle-switch">
+                            <input type="checkbox" id="targetBrokenToggle">
+                            <span class="broken-slider"></span>
+                        </label>
                     </div>
                 </div>
             </div>
