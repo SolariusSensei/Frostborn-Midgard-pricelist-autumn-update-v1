@@ -65,13 +65,31 @@ input:checked + .broken-slider:before { transform: translateX(24px); }
 .balance-bar-offer { height: 100%; background-color: var(--color-gear-blue); transition: width 0.5s ease-in-out; }
 .balance-bar-target { height: 100%; background-color: var(--color-gear-legendary); transition: width 0.5s ease-in-out; }
 
+/* Row fields grid (Qty / Book Value / Price / Remove) — replaces a
+   fixed Tailwind grid-cols-2/4 so it can drop to a single column on
+   very narrow phones instead of cramming 4 fields into ~340px. */
+.row-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+@media (max-width: 400px) {
+    .row-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (min-width: 640px) {
+    .row-fields-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
 /* Rarity Indicator Dot in Search Results */
 .search-result-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; cursor: pointer; transition: background-color 0.2s ease; }
 .search-result-item:hover { background-color: #4b5563; }
-.search-result-name { display: flex; align-items: center; gap: 0.5rem; overflow: hidden; }
+.search-result-name { display: flex; align-items: center; gap: 0.5rem; overflow: hidden; min-width: 0; }
 .search-result-name span { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 .rarity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.search-result-price { padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; color: #1f2937; white-space: nowrap; }
+.search-result-price { padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; color: #1f2937; white-space: nowrap; flex-shrink: 0; margin-left: 0.5rem; }
 
 /* Styled Verdict Box */
 #verdictBox { border: 2px solid var(--color-text-medium); transition: border-color 0.3s ease, background-color 0.3s ease; background-color: rgba(31, 41, 55, 0.5); }
