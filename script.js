@@ -391,6 +391,15 @@ function calculateItemLS(itemName, quantity, level, isBroken, armorPiece) {
 // negotiated for that item. The price auto-follows book value
 // until the person edits it directly, at which point it's marked
 // "touched" and stops auto-syncing (until reset).
+//
+// IMPORTANT: adding/removing a row must NEVER touch the DOM nodes
+// of other rows on that side. Re-rendering the whole container
+// (via container.innerHTML = ...) would blow away anything the
+// user was mid-typing in another row's search box (that text isn't
+// stored in state until an item is actually selected). So addRow /
+// removeRow surgically insert/remove a single row element instead
+// of calling renderRows(), which is now reserved for full resets
+// (initial load, clearing a side, switching servers).
 // =============================================================
 
 function createRowHTML(side, row) {
@@ -401,18 +410,18 @@ function createRowHTML(side, row) {
     const priceValue  = (row.customPrice || 0).toFixed(2);
 
     return `
-    <div id="${side}Row-${id}" class="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+    <div id="${side}Row-${id}" class="bg-gray-900/50 p-3 sm:p-4 rounded-lg border border-gray-700">
         <div class="relative mb-3">
             <label class="block text-xs font-medium mb-1 text-gray-400">Item</label>
             <input type="text" id="${side}Search-${id}" placeholder="Search for item..." autocomplete="off"
                 class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
-            <div id="${side}SearchResults-${id}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
+            <div id="${side}SearchResults-${id}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute left-0 right-0 z-10"></div>
             <div class="text-sm font-semibold mt-2">
                 <span id="${side}ItemNameDisplay-${id}" class="${nameClass}">${nameText}</span>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+        <div class="row-fields-grid gap-2 sm:gap-3 items-end">
             <div>
                 <label class="block text-xs font-medium mb-1 text-gray-400">Qty</label>
                 <input type="number" id="${side}Quantity-${id}" min="1" value="${row.quantity}"
@@ -471,6 +480,9 @@ function createRowHTML(side, row) {
     </div>`;
 }
 
+// Full re-render of a side — only used for whole-side resets
+// (initial load, "Clear All", switching servers). Never called by
+// addRow/removeRow so in-progress typing in other rows is safe.
 function renderRows(side) {
     const container = document.getElementById(`${side}Rows`);
     if (!rows[side].length) {
@@ -478,80 +490,75 @@ function renderRows(side) {
     } else {
         container.innerHTML = rows[side].map(r => createRowHTML(side, r)).join('');
     }
-    attachRowListeners(side);
 
-    // Restore each row's gear panel + book/price values now that the
-    // markup exists again — createRowHTML only lays out static state
-    // (name, qty, price), the dynamic gear UI has to be re-applied.
     rows[side].forEach(row => {
+        attachRowListenersFor(side, row);
         updateRowGearControls(side, row);
         recalculateRow(side, row);
     });
 }
 
-function attachRowListeners(side) {
-    rows[side].forEach((row) => {
-        const id = row.id;
+function attachRowListenersFor(side, row) {
+    const id = row.id;
 
-        const searchInput = document.getElementById(`${side}Search-${id}`);
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => handleRowSearchInput(side, id, e));
-        }
+    const searchInput = document.getElementById(`${side}Search-${id}`);
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => handleRowSearchInput(side, id, e));
+    }
 
-        const qtyInput = document.getElementById(`${side}Quantity-${id}`);
-        if (qtyInput) {
-            qtyInput.addEventListener('input', (e) => {
-                row.quantity = Math.max(1, Number(e.target.value) || 1);
-                recalculateRow(side, row);
-                updateTotals();
-            });
-        }
+    const qtyInput = document.getElementById(`${side}Quantity-${id}`);
+    if (qtyInput) {
+        qtyInput.addEventListener('input', (e) => {
+            row.quantity = Math.max(1, Number(e.target.value) || 1);
+            recalculateRow(side, row);
+            updateTotals();
+        });
+    }
 
-        const priceInput = document.getElementById(`${side}Price-${id}`);
-        if (priceInput) {
-            priceInput.addEventListener('input', (e) => {
-                row.customPrice  = Math.max(0, Number(e.target.value) || 0);
-                row.priceTouched = true;
-                updateTotals();
-            });
-        }
+    const priceInput = document.getElementById(`${side}Price-${id}`);
+    if (priceInput) {
+        priceInput.addEventListener('input', (e) => {
+            row.customPrice  = Math.max(0, Number(e.target.value) || 0);
+            row.priceTouched = true;
+            updateTotals();
+        });
+    }
 
-        const levelInput = document.getElementById(`${side}UpgradeLevel-${id}`);
-        if (levelInput) {
-            levelInput.addEventListener('input', (e) => {
-                row.level = Number(e.target.value) || 0;
-                document.getElementById(`${side}LevelLabel-${id}`).textContent = `+${row.level}`;
-                recalculateRow(side, row);
-                updateTotals();
-            });
-        }
+    const levelInput = document.getElementById(`${side}UpgradeLevel-${id}`);
+    if (levelInput) {
+        levelInput.addEventListener('input', (e) => {
+            row.level = Number(e.target.value) || 0;
+            document.getElementById(`${side}LevelLabel-${id}`).textContent = `+${row.level}`;
+            recalculateRow(side, row);
+            updateTotals();
+        });
+    }
 
-        const brokenToggle = document.getElementById(`${side}BrokenToggle-${id}`);
-        if (brokenToggle) {
-            brokenToggle.addEventListener('change', (e) => {
-                row.isBroken = e.target.checked;
-                recalculateRow(side, row);
-                updateTotals();
-            });
-        }
+    const brokenToggle = document.getElementById(`${side}BrokenToggle-${id}`);
+    if (brokenToggle) {
+        brokenToggle.addEventListener('change', (e) => {
+            row.isBroken = e.target.checked;
+            recalculateRow(side, row);
+            updateTotals();
+        });
+    }
 
-        const armorGroup = document.querySelector(`#${side}ArmorSelector-${id} .${side}-piece-button-group`);
-        if (armorGroup) {
-            armorGroup.querySelectorAll('[data-piece]').forEach(btn => {
-                btn.addEventListener('click', () => setRowArmorPiece(side, id, btn.dataset.piece));
-            });
-        }
+    const armorGroup = document.querySelector(`#${side}ArmorSelector-${id} .${side}-piece-button-group`);
+    if (armorGroup) {
+        armorGroup.querySelectorAll('[data-piece]').forEach(btn => {
+            btn.addEventListener('click', () => setRowArmorPiece(side, id, btn.dataset.piece));
+        });
+    }
 
-        const resetBtn = document.querySelector(`.reset-price-btn[data-side="${side}"][data-id="${id}"]`);
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => resetRowPrice(side, id));
-        }
+    const resetBtn = document.querySelector(`.reset-price-btn[data-side="${side}"][data-id="${id}"]`);
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => resetRowPrice(side, id));
+    }
 
-        const removeBtn = document.querySelector(`.remove-row-btn[data-side="${side}"][data-id="${id}"]`);
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => removeRow(side, id));
-        }
-    });
+    const removeBtn = document.querySelector(`.remove-row-btn[data-side="${side}"][data-id="${id}"]`);
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => removeRow(side, id));
+    }
 }
 
 function handleRowSearchInput(side, id, event) {
@@ -680,19 +687,50 @@ function recalculateRow(side, row) {
     return bookValue;
 }
 
+// Adds a single row without disturbing any other row's DOM/state —
+// this is the fix for rows "resetting" when adding a new item.
 function addRow(side) {
     rowSeq[side] += 1;
-    rows[side].push({
+    const row = {
         id: rowSeq[side], name: '', quantity: 1, level: 0, isBroken: false,
         armorPiece: 'Full Set', customPrice: 0, priceTouched: false
-    });
-    renderRows(side);
+    };
+    rows[side].push(row);
+
+    const container = document.getElementById(`${side}Rows`);
+
+    // First row on this side: the container currently just has the
+    // "No items yet" placeholder paragraph — clear it out.
+    if (rows[side].length === 1) {
+        container.innerHTML = '';
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = createRowHTML(side, row).trim();
+    const rowEl = wrapper.firstElementChild;
+    container.appendChild(rowEl);
+
+    attachRowListenersFor(side, row);
+    updateRowGearControls(side, row);
+    recalculateRow(side, row);
     updateTotals();
+
+    // Focus the new row's search box for a fast add-flow.
+    const searchInput = document.getElementById(`${side}Search-${row.id}`);
+    if (searchInput) searchInput.focus();
 }
 
+// Removes a single row's DOM node without touching any other row.
 function removeRow(side, id) {
     rows[side] = rows[side].filter(r => r.id !== id);
-    renderRows(side);
+
+    const rowEl = document.getElementById(`${side}Row-${id}`);
+    if (rowEl) rowEl.remove();
+
+    if (!rows[side].length) {
+        renderRows(side); // show the empty-state placeholder
+    }
+
     updateTotals();
 }
 
