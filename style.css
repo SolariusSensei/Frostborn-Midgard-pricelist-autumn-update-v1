@@ -19,9 +19,9 @@ body {
     min-height: 100vh;
 }
 
-/* --- NEW LAYOUT STYLES --- */
-#your-offer-panel > h2,
-#their-offer-panel > h2,
+/* --- LAYOUT STYLES --- */
+#your-offer-panel > div > h2,
+#their-offer-panel > div > h2,
 #about-section h1 {
     border-bottom-color: var(--color-secondary);
     border-bottom-width: 2px;
