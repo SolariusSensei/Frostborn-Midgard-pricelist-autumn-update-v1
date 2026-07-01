@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Midgard Market — Price History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app" class="p-4 lg:p-6 max-w-6xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <a href="index.html" class="text-gray-400 hover:text-amber-400 text-sm font-semibold transition">&larr; Back to Trade Builder</a>
+        <div class="sm:ml-auto flex items-center gap-3">
+            <label class="text-gray-400 font-semibold text-sm">Server:</label>
+            <select id="serverSelector" class="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
+        </div>
+    </div>
+
+    <div class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold gold-text">Market</h1>
+        <p class="text-gray-400 text-sm mt-1">Historical price movement, sourced from approved suggestions. No predictions — just what happened.</p>
+    </div>
+
+    <!-- Market Index (optional overall chart) -->
+    <div id="marketIndexCard" class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 class="text-xl font-bold gold-text">Economy Index</h2>
+            <div id="marketIndexStat" class="text-sm text-gray-400"></div>
+        </div>
+        <div style="height: 220px;">
+            <canvas id="marketIndexChart"></canvas>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Average % change across all tracked items, snapshotted daily.</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+        <input id="itemSearch" type="text" placeholder="Filter by item name..."
+            class="flex-1 min-w-[180px] p-2 bg-gray-800 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+        <select id="categoryFilter" class="bg-gray-800 border border-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="">All categories</option>
+        </select>
+        <select id="sortSelector" class="bg-gray-800 border border-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="pct7-desc">7d: Biggest gainers</option>
+            <option value="pct7-asc">7d: Biggest losers</option>
+            <option value="pct30-desc">30d: Biggest gainers</option>
+            <option value="pct30-asc">30d: Biggest losers</option>
+            <option value="price-desc">Price: High to low</option>
+            <option value="price-asc">Price: Low to high</option>
+        </select>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-900/60 text-gray-400 uppercase text-xs">
+                    <tr>
+                        <th class="px-4 py-3">Item</th>
+                        <th class="px-4 py-3">Category</th>
+                        <th class="px-4 py-3 text-right">Current Price</th>
+                        <th class="px-4 py-3 text-right">7d %</th>
+                        <th class="px-4 py-3 text-right">30d %</th>
+                    </tr>
+                </thead>
+                <tbody id="marketTableBody" class="divide-y divide-gray-700">
+                    <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Loading market data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p id="emptyState" class="text-center text-gray-500 text-sm mt-6 hidden">No items match your filters.</p>
+
+    <!-- Drill-down Modal -->
+    <div id="itemHistoryModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 id="itemHistoryTitle" class="text-2xl font-bold gold-text">Item</h2>
+                    <p id="itemHistorySubtitle" class="text-gray-400 text-sm mt-1"></p>
+                </div>
+                <button onclick="closeItemHistoryModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div style="height: 280px;">
+                <canvas id="itemHistoryChart"></canvas>
+            </div>
+            <div id="itemHistoryEmpty" class="text-center text-gray-500 text-sm mt-4 hidden">No price history recorded yet for this item.</div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module" src="market.js"></script>
+</body>
+</html>
