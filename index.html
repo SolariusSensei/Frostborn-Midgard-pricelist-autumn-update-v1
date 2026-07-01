@@ -19,25 +19,22 @@
         </div>
     </div>
 
-    <!-- Server Selector -->
-    <div class="mb-4 flex items-center gap-4">
-        <label class="text-gray-400 font-semibold">Server:</label>
-        <select id="serverSelector" class="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
-        <button onclick="openSuggestionModal()" class="ml-auto bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg transition">
-            Suggest Price Change
-        </button>
+    <!-- Header -->
+    <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="flex items-center gap-3">
+            <label class="text-gray-400 font-semibold">Server:</label>
+            <select id="serverSelector" class="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
+        </div>
+        <div class="sm:ml-auto flex gap-2">
+            <button onclick="openSuggestionModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg transition">
+                Suggest Price Change
+            </button>
+        </div>
     </div>
 
-    <!-- Mode Tabs -->
-    <div class="mb-6 flex gap-2 border-b border-gray-700">
-        <button id="tabBtnTrade" onclick="switchTab('trade')"
-            class="tab-btn px-5 py-3 font-bold rounded-t-lg transition border-b-2">
-            Trade Calculator
-        </button>
-        <button id="tabBtnQuick" onclick="switchTab('quick')"
-            class="tab-btn px-5 py-3 font-bold rounded-t-lg transition border-b-2">
-            Quick Valuation
-        </button>
+    <div class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold gold-text">Trade Builder</h1>
+        <p class="text-gray-400 text-sm mt-1">List anything on either side of the trade. Every item shows its book value and lets you set the price you're actually negotiating.</p>
     </div>
 
    <!-- Price Suggestion Modal -->
@@ -68,6 +65,7 @@
         </form>
     </div>
 </div>
+
     <!-- Admin Login Modal -->
 <div id="adminLoginModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
     <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-sm shadow-2xl">
@@ -100,60 +98,72 @@
     </div>
 </div>
 
-    <!-- ===================== TRADE CALCULATOR TAB ===================== -->
-    <div id="tradeCalculatorView">
+    <!-- Copy Trade Modal -->
+    <div id="copyTradeModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl">
+            <h2 class="text-2xl font-bold gold-text mb-2">Copy Trade</h2>
+            <p class="text-gray-400 text-sm mb-4">Paste this into chat to post the agreed trade.</p>
+            <textarea id="copyTradeText" readonly rows="14"
+                class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar"></textarea>
+            <p id="copyTradeStatus" class="text-sm mt-2 h-5"></p>
+            <div class="flex gap-4 mt-4">
+                <button onclick="copyTradeToClipboard()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition">Copy to Clipboard</button>
+                <button onclick="closeCopyTradeModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Close</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Trade Agreement -->
-    <div id="trade-agreement" class="lg:grid lg:grid-cols-2 lg:gap-8 mb-8">
+    <!-- ===================== TRADE BUILDER ===================== -->
+    <div id="tradeBuilder" class="lg:grid lg:grid-cols-2 lg:gap-8 mb-8">
 
+        <!-- YOUR OFFER -->
         <div id="your-offer-panel" class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 lg:mb-0">
-            <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">YOUR OFFER</h2>
-            <div id="offerSlots" class="space-y-6 max-h-[60vh] lg:max-h-none overflow-y-auto custom-scrollbar pr-2"></div>
-            <button id="addOfferSlot" class="w-full mt-6 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
-                Add Item to Your Offer (Max 5)
-            </button>
+            <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 class="text-3xl font-extrabold gold-text">YOUR OFFER</h2>
+            </div>
+            <div id="yourRows" class="space-y-4"></div>
+            <div class="flex gap-3 mt-6">
+                <button id="addYourRow" class="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
+                    + Add Item
+                </button>
+                <button id="clearYourRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
+                    Clear All
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-700 text-center">
+                <div>
+                    <div class="text-xs text-gray-400">Book Total</div>
+                    <div id="yourBookTotalLS" class="text-xl font-bold text-gray-300">0.00 LS</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400">Your Price Total</div>
+                    <div id="yourCustomTotalLS" class="text-xl font-bold text-blue-300">0.00 LS</div>
+                </div>
+            </div>
         </div>
 
+        <!-- THEIR OFFER -->
         <div id="their-offer-panel" class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <h2 class="text-3xl font-extrabold mb-4 gold-text border-b pb-2">THEIR OFFER</h2>
-
-            <input type="text" id="targetSearch" placeholder="Search for Item..." autocomplete="off"
-                class="w-full p-2 mb-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
-            <div id="targetSearchResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mb-2 hidden"></div>
-            <div class="text-sm font-semibold p-2 rounded-md bg-gray-900 border border-gray-700 min-h-[35px] text-gray-400">
-                <span class="text-xs text-amber-500 block">Selected:</span>
-                <span id="targetItemNameDisplay">None</span>
+            <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 class="text-3xl font-extrabold gold-text">THEIR OFFER</h2>
             </div>
-
-            <div id="targetControls" class="mt-4">
-                <label class="block text-sm font-medium mb-1 text-gray-400">Quantity</label>
-                <input type="number" id="targetQuantity" min="1" value="1" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
-                <div id="targetGearControls" class="space-y-3 mt-4 hidden">
-                    <div class="flex justify-between items-center text-sm font-medium">
-                        <span class="text-gray-400">Base LS:</span>
-                        <span id="targetBaseLSDisplay" class="font-bold">0</span>
-                    </div>
-                    <div>
-                        <label for="targetUpgradeLevel" class="block text-sm font-medium text-gray-400">Upgrade Level (<span id="targetLevelLabel">+0</span>)</label>
-                        <input type="range" id="targetUpgradeLevel" min="0" max="0" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
-                    </div>
-                    <div id="targetArmorSelector" class="hidden">
-                        <label class="block text-sm font-medium mb-2 text-gray-400">Select Armor Piece</label>
-                        <div id="targetPieceButtons" class="grid grid-cols-2 gap-2 text-xs">
-                            <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
-                            <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
-                            <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
-                            <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
-                            <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-gray-400">Broken Status</span>
-                        <label class="broken-toggle-switch">
-                            <input type="checkbox" id="targetBrokenToggle">
-                            <span class="broken-slider"></span>
-                        </label>
-                    </div>
+            <div id="theirRows" class="space-y-4"></div>
+            <div class="flex gap-3 mt-6">
+                <button id="addTheirRow" class="flex-1 py-3 bg-amber-600 rounded-lg font-bold text-white hover:bg-amber-500 transition shadow-lg">
+                    + Add Item
+                </button>
+                <button id="clearTheirRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
+                    Clear All
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-700 text-center">
+                <div>
+                    <div class="text-xs text-gray-400">Book Total</div>
+                    <div id="theirBookTotalLS" class="text-xl font-bold text-gray-300">0.00 LS</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400">Their Price Total</div>
+                    <div id="theirCustomTotalLS" class="text-xl font-bold text-amber-300">0.00 LS</div>
                 </div>
             </div>
         </div>
@@ -162,135 +172,49 @@
 
     <!-- Verdict Section -->
     <div id="verdict-section" class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 space-y-6">
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center text-center">
             <div class="p-4 bg-blue-900/50 rounded-lg border border-blue-700">
-                <h3 class="text-lg font-semibold text-gray-400 mb-1">Your Total Value</h3>
+                <h3 class="text-sm font-semibold text-gray-400 mb-1">Your Offer (Price)</h3>
                 <span id="your-total-ls" class="text-3xl font-bold text-blue-300">0.00 LS</span>
+                <div class="text-xs text-gray-500 mt-1">Book: <span id="your-total-book">0.00 LS</span></div>
             </div>
             <div class="p-4">
-                <h3 class="text-lg font-semibold text-gray-400 mb-1">Live Difference</h3>
+                <h3 class="text-sm font-semibold text-gray-400 mb-1">Live Difference (Price basis)</h3>
                 <span id="liveDifference" class="text-3xl font-bold text-gray-300">0.00 LS</span>
             </div>
             <div class="p-4 bg-amber-900/50 rounded-lg border border-amber-700">
-                <h3 class="text-lg font-semibold text-gray-400 mb-1">Their Total Value</h3>
+                <h3 class="text-sm font-semibold text-gray-400 mb-1">Their Offer (Price)</h3>
                 <span id="their-total-ls" class="text-3xl font-bold text-amber-300">0.00 LS</span>
+                <div class="text-xs text-gray-500 mt-1">Book: <span id="their-total-book">0.00 LS</span></div>
             </div>
         </div>
+
         <div>
-            <h3 class="text-lg font-semibold mb-1 text-gray-400 text-center">Trade Balance</h3>
+            <h3 class="text-lg font-semibold mb-1 text-gray-400 text-center">Trade Balance (Price basis)</h3>
             <div class="balance-scale-container">
                 <div id="balanceBarOffer" class="balance-bar-offer" style="width: 50%;"></div>
                 <div id="balanceBarTarget" class="balance-bar-target" style="width: 50%;"></div>
             </div>
             <p id="balanceStatusText" class="text-center text-sm font-medium mt-1">Select items to begin trade.</p>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div id="verdictBox" class="p-4 rounded-lg shadow-xl">
                 <h3 class="text-xl font-bold mb-3 text-center">Final Verdict</h3>
                 <p id="tradeVerdict" class="text-center text-lg font-semibold text-gray-300">Waiting for input...</p>
             </div>
             <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-400 mb-2">Refund / Deficiency Suggestion</h3>
-                <div id="tradeSuggestion" class="text-sm text-gray-300">Awaiting calculation...</div>
+                <h3 class="text-lg font-semibold text-gray-400 mb-2">Book Value Check</h3>
+                <p id="bookValueCheck" class="text-sm text-gray-300">Add items to compare against book value.</p>
             </div>
         </div>
+
+        <button id="openCopyTrade" class="w-full py-3 bg-green-700 hover:bg-green-600 text-white font-bold rounded-lg transition shadow-lg">
+            📋 Copy Trade
+        </button>
     </div>
-
-    </div>
-    <!-- ===================== END TRADE CALCULATOR TAB ===================== -->
-
-    <!-- ===================== QUICK VALUATION TAB ===================== -->
-    <div id="quickValuationView" class="hidden">
-
-        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-6">
-            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-2 border-b border-amber-500 border-opacity-40 pb-4">
-                <div>
-                    <h2 class="text-3xl font-extrabold gold-text">Quick Valuation</h2>
-                    <p class="text-gray-400 text-sm mt-1">List everything the seller has and their quantities to get an instant total stack value.</p>
-                </div>
-                <div class="text-right shrink-0">
-                    <div class="text-sm text-gray-400">Total Stack Value</div>
-                    <div id="quickTotalLS" class="text-4xl font-bold text-amber-300">0.00 LS</div>
-                    <div id="quickItemCount" class="text-xs text-gray-500 mt-1">0 items listed</div>
-                </div>
-            </div>
-
-            <div id="quickRows" class="space-y-4 mt-4"></div>
-
-            <div class="flex gap-3 mt-6">
-                <button id="addQuickRow" class="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
-                    + Add Item
-                </button>
-                <button id="clearQuickRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
-                    Clear All
-                </button>
-            </div>
-        </div>
-
-        <!-- Your Items To Offer -->
-        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-6">
-            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-2 border-b border-blue-500 border-opacity-40 pb-4">
-                <div>
-                    <h2 class="text-3xl font-extrabold text-blue-300">Your Items To Offer</h2>
-                    <p class="text-gray-400 text-sm mt-1">List what you have available to trade. We'll figure out what to actually put forward.</p>
-                </div>
-                <div class="text-right shrink-0">
-                    <div class="text-sm text-gray-400">Your Available Total</div>
-                    <div id="myItemsTotalLS" class="text-4xl font-bold text-blue-300">0.00 LS</div>
-                </div>
-            </div>
-
-            <div id="myItemRows" class="space-y-4 mt-4"></div>
-
-            <div class="flex gap-3 mt-6">
-                <button id="addMyItemRow" class="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
-                    + Add Item
-                </button>
-                <button id="clearMyItems" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
-                    Clear All
-                </button>
-            </div>
-        </div>
-
-        <!-- Suggested Offer -->
-        <div id="offerSuggestionPanel" class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 space-y-4">
-            <h2 class="text-2xl font-extrabold gold-text border-b pb-2">Suggested Offer</h2>
-            <p id="offerSuggestionEmpty" class="text-gray-500 text-sm py-4">Add the seller's items above and list what you have to offer — we'll suggest exactly what to give up.</p>
-
-            <div id="offerSuggestionBody" class="hidden space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    <div class="p-4 bg-amber-900/50 rounded-lg border border-amber-700">
-                        <h3 class="text-sm font-semibold text-gray-400 mb-1">Seller Wants</h3>
-                        <span id="suggestTargetLS" class="text-2xl font-bold text-amber-300">0.00 LS</span>
-                    </div>
-                    <div class="p-4 bg-blue-900/50 rounded-lg border border-blue-700">
-                        <h3 class="text-sm font-semibold text-gray-400 mb-1">Suggested Offer Value</h3>
-                        <span id="suggestOfferLS" class="text-2xl font-bold text-blue-300">0.00 LS</span>
-                    </div>
-                    <div id="suggestDiffBox" class="p-4 rounded-lg border border-gray-700">
-                        <h3 class="text-sm font-semibold text-gray-400 mb-1">Difference</h3>
-                        <span id="suggestDiffLS" class="text-2xl font-bold text-gray-300">0.00 LS</span>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="balance-scale-container">
-                        <div id="suggestCoverageBar" class="balance-bar-offer" style="width: 0%;"></div>
-                    </div>
-                    <p id="suggestCoverageText" class="text-center text-xs text-gray-500 mt-1">0% of seller's ask covered</p>
-                </div>
-
-                <div id="suggestWarning" class="hidden p-3 rounded-lg border border-red-700 bg-red-900/30 text-red-300 text-sm font-medium"></div>
-
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-400 mb-2">Items To Include In Your Offer</h3>
-                    <div id="suggestItemList" class="space-y-1 text-sm text-gray-200"></div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-    <!-- ===================== END QUICK VALUATION TAB ===================== -->
+    <!-- ===================== END TRADE BUILDER ===================== -->
 
     <!-- About Section -->
     <div id="about-section" class="fixed inset-0 bg-gray-900/95 z-50 p-8 overflow-y-auto hidden">
