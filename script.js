@@ -31,6 +31,8 @@ let ITEM_DATABASE   = {};
 let currentServerId = null;
 let targetState      = { name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' };
 let offerStates      = [];
+let quickRows        = []; // Quick Valuation rows — no cap on length
+let quickRowSeq      = 0;  // stable unique id counter for quick rows (independent of array index)
 
 // =============================================================
 // SUPABASE HELPERS (public read-only)
@@ -285,6 +287,7 @@ async function loadServers() {
         showLoading(true);
         await loadItems();
         resetTrade();
+        resetQuickValuation();
         showLoading(false);
     });
 }
@@ -505,7 +508,7 @@ function suggestItems(targetValue) {
 }
 
 // =============================================================
-// SEARCH & ITEM SELECTION
+// SEARCH & ITEM SELECTION (Trade Calculator)
 // =============================================================
 
 function handleSearchInput(event, resultsId, isTarget) {
@@ -612,7 +615,7 @@ function setArmorPiece(piece, slotId, isTarget) {
 }
 
 // =============================================================
-// OFFER SLOTS
+// OFFER SLOTS (Trade Calculator — capped at MAX_OFFER_SLOTS)
 // =============================================================
 
 function createOfferSlotHTML(index) {
@@ -745,6 +748,307 @@ function removeOfferSlot(index) {
 }
 
 // =============================================================
+// QUICK VALUATION TAB
+// ---------------------------------------------------------------
+// Purpose: someone lists everything they have for sale ("selling
+// X, Y, Z"). You drop in each item + the quantity they have, and
+// this gives you an instant total stack value — no "your offer vs
+// their offer" framing, no balance bar, no verdict. Just item,
+// quantity, running total. No cap on number of rows.
+// =============================================================
+
+function createQuickRowHTML(row) {
+    const id = row.id;
+    return `
+    <div id="quickRow-${id}" class="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-start">
+            <div class="flex-1 relative">
+                <label class="block text-xs font-medium mb-1 text-gray-400">Item</label>
+                <input type="text" id="quickSearch-${id}" placeholder="Search for item..." autocomplete="off"
+                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+                <div id="quickSearchResults-${id}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
+                <div class="text-sm font-semibold mt-2">
+                    <span id="quickItemNameDisplay-${id}" class="text-gray-200">No item selected</span>
+                </div>
+            </div>
+            <div class="w-full sm:w-28 shrink-0">
+                <label class="block text-xs font-medium mb-1 text-gray-400">Quantity</label>
+                <input type="number" id="quickQuantity-${id}" min="1" value="1"
+                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
+            </div>
+            <div class="w-full sm:w-32 shrink-0 text-left sm:text-right">
+                <label class="block text-xs font-medium mb-1 text-gray-400 sm:invisible">Value</label>
+                <span id="quickLSDisplay-${id}" class="font-bold text-amber-300 text-lg">0.00 LS</span>
+            </div>
+            <button data-id="${id}" class="remove-quick-btn text-red-500 hover:text-red-400 text-sm font-bold shrink-0 sm:pt-6">
+                Remove
+            </button>
+        </div>
+
+        <div id="quickGearControls-${id}" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-800 hidden">
+            <div class="flex justify-between items-center text-sm font-medium sm:col-span-2">
+                <span class="text-gray-400">Base LS:</span>
+                <span id="quickBaseLSDisplay-${id}" class="font-bold">0</span>
+            </div>
+            <div>
+                <label for="quickUpgradeLevel-${id}" class="block text-xs font-medium text-gray-400">
+                    Upgrade Level (<span id="quickLevelLabel-${id}">+0</span>)
+                </label>
+                <input type="range" id="quickUpgradeLevel-${id}" min="0" max="0" value="0"
+                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-400">Broken</span>
+                <label class="broken-toggle-switch">
+                    <input type="checkbox" id="quickBrokenToggle-${id}">
+                    <span class="broken-slider"></span>
+                </label>
+            </div>
+            <div id="quickArmorSelector-${id}" class="hidden sm:col-span-2">
+                <label class="block text-xs font-medium mb-2 text-gray-400">Select Armor Piece</label>
+                <div class="quick-piece-button-group grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                    <button data-piece="Full Set" class="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">Full Set</button>
+                    <button data-piece="Head" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Head (20%)</button>
+                    <button data-piece="Chest" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Chest (30%)</button>
+                    <button data-piece="Pants" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Pants (22%)</button>
+                    <button data-piece="Boots" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Boots (28%)</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderQuickRows() {
+    const container = document.getElementById('quickRows');
+    if (!quickRows.length) {
+        container.innerHTML = '<p class="text-gray-500 text-sm text-center py-6">No items yet — click "+ Add Item" to start listing what the seller has.</p>';
+    } else {
+        container.innerHTML = quickRows.map(createQuickRowHTML).join('');
+    }
+    attachQuickRowListeners();
+}
+
+function attachQuickRowListeners() {
+    quickRows.forEach((row) => {
+        const id = row.id;
+
+        const searchInput = document.getElementById(`quickSearch-${id}`);
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => handleQuickSearchInput(e, id));
+        }
+
+        const qtyInput = document.getElementById(`quickQuantity-${id}`);
+        if (qtyInput) {
+            qtyInput.addEventListener('input', (e) => {
+                row.quantity = Math.max(1, Number(e.target.value) || 1);
+                updateQuickTotal();
+            });
+        }
+
+        const levelInput = document.getElementById(`quickUpgradeLevel-${id}`);
+        if (levelInput) {
+            levelInput.addEventListener('input', (e) => {
+                row.level = Number(e.target.value) || 0;
+                document.getElementById(`quickLevelLabel-${id}`).textContent = `+${row.level}`;
+                updateQuickTotal();
+            });
+        }
+
+        const brokenToggle = document.getElementById(`quickBrokenToggle-${id}`);
+        if (brokenToggle) {
+            brokenToggle.addEventListener('change', (e) => {
+                row.isBroken = e.target.checked;
+                updateQuickTotal();
+            });
+        }
+
+        const armorGroup = document.querySelector(`#quickArmorSelector-${id} .quick-piece-button-group`);
+        if (armorGroup) {
+            armorGroup.querySelectorAll('[data-piece]').forEach(btn => {
+                btn.addEventListener('click', () => setQuickArmorPiece(btn.dataset.piece, id));
+            });
+        }
+
+        const removeBtn = document.querySelector(`.remove-quick-btn[data-id="${id}"]`);
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => removeQuickRow(id));
+        }
+    });
+}
+
+function handleQuickSearchInput(event, id) {
+    const query      = event.target.value.trim().toLowerCase();
+    const resultsDiv = document.getElementById(`quickSearchResults-${id}`);
+    if (query.length < 2) { resultsDiv.classList.add('hidden'); return; }
+
+    const matches = Object.keys(ITEM_DATABASE).filter(n => n.toLowerCase().includes(query));
+    if (!matches.length) {
+        resultsDiv.innerHTML = '<div class="p-2 text-sm text-gray-400">No items found.</div>';
+        resultsDiv.classList.remove('hidden');
+        return;
+    }
+
+    resultsDiv.innerHTML = matches.map(name => {
+        const data  = getItemData(name);
+        const color = getRarityColor(data.rarity);
+        const safe  = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
+        <div class="search-result-item" onclick="selectQuickItem('${safe}', ${id})">
+            <div class="search-result-name">
+                <div class="rarity-dot" style="background-color:${color};"></div>
+                <span>${name}</span>
+            </div>
+            <span class="search-result-price" style="background-color:${color};">${formatLS(data.price)}</span>
+        </div>`;
+    }).join('');
+    resultsDiv.classList.remove('hidden');
+}
+
+function selectQuickItem(itemName, id) {
+    const item = getItemData(itemName);
+    if (!item) return;
+    const row = quickRows.find(r => r.id === id);
+    if (!row) return;
+
+    row.name       = itemName;
+    row.level      = 0;
+    row.isBroken   = false;
+    row.armorPiece = item.isArmorSet ? 'Full Set' : 'N/A';
+
+    document.getElementById(`quickItemNameDisplay-${id}`).textContent = itemName;
+    document.getElementById(`quickItemNameDisplay-${id}`).classList.add('text-amber-300');
+    document.getElementById(`quickSearch-${id}`).value = '';
+    document.getElementById(`quickSearchResults-${id}`).classList.add('hidden');
+
+    updateQuickGearControls(row);
+    updateQuickTotal();
+}
+
+function updateQuickGearControls(row) {
+    const item   = getItemData(row.name);
+    const id     = row.id;
+    const gearEl = document.getElementById(`quickGearControls-${id}`);
+    if (!gearEl) return;
+
+    if (!item || !item.isGear) { gearEl.classList.add('hidden'); return; }
+    gearEl.classList.remove('hidden');
+
+    document.getElementById(`quickBaseLSDisplay-${id}`).textContent = formatLS(item.price);
+
+    const maxLevel   = UPGRADE_LIMITS[item.rarity] || 0;
+    const levelInput = document.getElementById(`quickUpgradeLevel-${id}`);
+    levelInput.max   = maxLevel;
+    row.level        = Math.min(Number(row.level) || 0, maxLevel);
+    levelInput.value = row.level;
+    document.getElementById(`quickLevelLabel-${id}`).textContent = `+${row.level}`;
+    document.getElementById(`quickBrokenToggle-${id}`).checked = row.isBroken;
+
+    const armorEl = document.getElementById(`quickArmorSelector-${id}`);
+    if (item.isArmorSet) {
+        armorEl.classList.remove('hidden');
+        const groupEl = document.querySelector(`#quickArmorSelector-${id} .quick-piece-button-group`);
+        if (groupEl) {
+            groupEl.querySelectorAll('[data-piece]').forEach(btn => {
+                const active = btn.dataset.piece === row.armorPiece;
+                btn.classList.toggle('bg-indigo-600',      active);
+                btn.classList.toggle('hover:bg-indigo-700', active);
+                btn.classList.toggle('bg-gray-700',        !active);
+                btn.classList.toggle('hover:bg-gray-600',  !active);
+            });
+        }
+    } else {
+        armorEl.classList.add('hidden');
+    }
+}
+
+function setQuickArmorPiece(piece, id) {
+    const row = quickRows.find(r => r.id === id);
+    if (!row) return;
+    row.armorPiece = piece;
+    updateQuickGearControls(row);
+    updateQuickTotal();
+}
+
+function updateQuickTotal() {
+    let total = 0;
+    let itemCount = 0;
+
+    quickRows.forEach(row => {
+        const itemLS = row.name
+            ? calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece)
+            : 0;
+        total += itemLS;
+        if (row.name) itemCount += row.quantity;
+        const display = document.getElementById(`quickLSDisplay-${row.id}`);
+        if (display) display.textContent = formatLS(itemLS);
+    });
+
+    document.getElementById('quickTotalLS').textContent = formatLS(total);
+    const rowsWithItems = quickRows.filter(r => r.name).length;
+    document.getElementById('quickItemCount').textContent =
+        `${rowsWithItems} item type${rowsWithItems === 1 ? '' : 's'} · ${itemCount} total unit${itemCount === 1 ? '' : 's'}`;
+}
+
+function addQuickRowHandler() {
+    quickRowSeq += 1;
+    quickRows.push({ id: quickRowSeq, name: '', quantity: 1, level: 0, isBroken: false, armorPiece: 'Full Set' });
+    renderQuickRows();
+    updateQuickTotal();
+}
+
+function removeQuickRow(id) {
+    quickRows = quickRows.filter(r => r.id !== id);
+    renderQuickRows();
+    updateQuickTotal();
+}
+
+function clearQuickRowsHandler() {
+    if (quickRows.length && !confirm('Clear all items from Quick Valuation?')) return;
+    quickRows = [];
+    renderQuickRows();
+    updateQuickTotal();
+    addQuickRowHandler(); // leave one empty row ready to go
+}
+
+function resetQuickValuation() {
+    quickRows   = [];
+    quickRowSeq = 0;
+    renderQuickRows();
+    updateQuickTotal();
+    addQuickRowHandler();
+}
+
+// =============================================================
+// TAB SWITCHING
+// =============================================================
+
+function switchTab(tab) {
+    const tradeView = document.getElementById('tradeCalculatorView');
+    const quickView = document.getElementById('quickValuationView');
+    const tradeBtn  = document.getElementById('tabBtnTrade');
+    const quickBtn  = document.getElementById('tabBtnQuick');
+
+    const activeClasses   = ['text-amber-400', 'border-amber-500'];
+    const inactiveClasses = ['text-gray-400', 'border-transparent', 'hover:text-gray-200'];
+
+    if (tab === 'quick') {
+        tradeView.classList.add('hidden');
+        quickView.classList.remove('hidden');
+        tradeBtn.classList.remove(...activeClasses);
+        tradeBtn.classList.add(...inactiveClasses);
+        quickBtn.classList.add(...activeClasses);
+        quickBtn.classList.remove(...inactiveClasses);
+    } else {
+        quickView.classList.add('hidden');
+        tradeView.classList.remove('hidden');
+        quickBtn.classList.remove(...activeClasses);
+        quickBtn.classList.add(...inactiveClasses);
+        tradeBtn.classList.add(...activeClasses);
+        tradeBtn.classList.remove(...inactiveClasses);
+    }
+}
+
+// =============================================================
 // PRICE SUGGESTION MODAL (public, writes to `suggestions` table)
 // =============================================================
 
@@ -866,6 +1170,9 @@ function attachStaticListeners() {
 
     document.getElementById('addOfferSlot').addEventListener('click', addOfferSlotHandler);
 
+    document.getElementById('addQuickRow').addEventListener('click', addQuickRowHandler);
+    document.getElementById('clearQuickRows').addEventListener('click', clearQuickRowsHandler);
+
     document.getElementById('suggestItemName')
         .addEventListener('input', handleSuggestItemSearch);
 
@@ -886,6 +1193,8 @@ function attachStaticListeners() {
 // Expose functions used via inline onclick="" in index.html
 window.selectItem          = selectItem;
 window.selectSuggestItem   = selectSuggestItem;
+window.selectQuickItem     = selectQuickItem;
+window.switchTab           = switchTab;
 window.openSuggestionModal = openSuggestionModal;
 window.closeSuggestionModal= closeSuggestionModal;
 window.submitSuggestion    = submitSuggestion;
@@ -902,6 +1211,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachStaticListeners();
     await loadServers();
     resetTrade();
+    resetQuickValuation();
+    switchTab('trade');
     showLoading(false);
 
     // If an admin is already mid-session (e.g. page refresh), keep them logged in
