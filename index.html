@@ -20,11 +20,23 @@
     </div>
 
     <!-- Server Selector -->
-    <div class="mb-6 flex items-center gap-4">
+    <div class="mb-4 flex items-center gap-4">
         <label class="text-gray-400 font-semibold">Server:</label>
         <select id="serverSelector" class="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
         <button onclick="openSuggestionModal()" class="ml-auto bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg transition">
             Suggest Price Change
+        </button>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="mb-6 flex gap-2 border-b border-gray-700">
+        <button id="tabBtnTrade" onclick="switchTab('trade')"
+            class="tab-btn px-5 py-3 font-bold rounded-t-lg transition border-b-2">
+            Trade Calculator
+        </button>
+        <button id="tabBtnQuick" onclick="switchTab('quick')"
+            class="tab-btn px-5 py-3 font-bold rounded-t-lg transition border-b-2">
+            Quick Valuation
         </button>
     </div>
 
@@ -87,6 +99,9 @@
         <button onclick="closeAdminModal()" class="w-full mt-8 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg transition">Close</button>
     </div>
 </div>
+
+    <!-- ===================== TRADE CALCULATOR TAB ===================== -->
+    <div id="tradeCalculatorView">
 
     <!-- Trade Agreement -->
     <div id="trade-agreement" class="lg:grid lg:grid-cols-2 lg:gap-8 mb-8">
@@ -177,6 +192,40 @@
             </div>
         </div>
     </div>
+
+    </div>
+    <!-- ===================== END TRADE CALCULATOR TAB ===================== -->
+
+    <!-- ===================== QUICK VALUATION TAB ===================== -->
+    <div id="quickValuationView" class="hidden">
+
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-6">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-2 border-b border-amber-500 border-opacity-40 pb-4">
+                <div>
+                    <h2 class="text-3xl font-extrabold gold-text">Quick Valuation</h2>
+                    <p class="text-gray-400 text-sm mt-1">List everything the seller has and their quantities to get an instant total stack value.</p>
+                </div>
+                <div class="text-right shrink-0">
+                    <div class="text-sm text-gray-400">Total Stack Value</div>
+                    <div id="quickTotalLS" class="text-4xl font-bold text-amber-300">0.00 LS</div>
+                    <div id="quickItemCount" class="text-xs text-gray-500 mt-1">0 items listed</div>
+                </div>
+            </div>
+
+            <div id="quickRows" class="space-y-4 mt-4"></div>
+
+            <div class="flex gap-3 mt-6">
+                <button id="addQuickRow" class="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
+                    + Add Item
+                </button>
+                <button id="clearQuickRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
+                    Clear All
+                </button>
+            </div>
+        </div>
+
+    </div>
+    <!-- ===================== END QUICK VALUATION TAB ===================== -->
 
     <!-- About Section -->
     <div id="about-section" class="fixed inset-0 bg-gray-900/95 z-50 p-8 overflow-y-auto hidden">
