@@ -394,39 +394,48 @@ function calculateItemLS(itemName, quantity, level, isBroken, armorPiece) {
 // =============================================================
 
 function createRowHTML(side, row) {
-    const id = row.id;
+    const id          = row.id;
+    const hasItem     = !!row.name;
+    const nameClass   = hasItem ? (side === 'your' ? 'text-blue-300' : 'text-amber-300') : 'text-gray-200';
+    const nameText    = hasItem ? row.name : 'No item selected';
+    const priceValue  = (row.customPrice || 0).toFixed(2);
+
     return `
     <div id="${side}Row-${id}" class="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-        <div class="flex flex-col sm:flex-row gap-3 sm:items-start">
-            <div class="flex-1 relative">
-                <label class="block text-xs font-medium mb-1 text-gray-400">Item</label>
-                <input type="text" id="${side}Search-${id}" placeholder="Search for item..." autocomplete="off"
-                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
-                <div id="${side}SearchResults-${id}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
-                <div class="text-sm font-semibold mt-2">
-                    <span id="${side}ItemNameDisplay-${id}" class="text-gray-200">No item selected</span>
-                </div>
+        <div class="relative mb-3">
+            <label class="block text-xs font-medium mb-1 text-gray-400">Item</label>
+            <input type="text" id="${side}Search-${id}" placeholder="Search for item..." autocomplete="off"
+                class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+            <div id="${side}SearchResults-${id}" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
+            <div class="text-sm font-semibold mt-2">
+                <span id="${side}ItemNameDisplay-${id}" class="${nameClass}">${nameText}</span>
             </div>
-            <div class="w-full sm:w-24 shrink-0">
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+            <div>
                 <label class="block text-xs font-medium mb-1 text-gray-400">Qty</label>
-                <input type="number" id="${side}Quantity-${id}" min="1" value="1"
+                <input type="number" id="${side}Quantity-${id}" min="1" value="${row.quantity}"
                     class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
             </div>
-            <div class="w-full sm:w-32 shrink-0 text-left sm:text-right">
+            <div>
                 <label class="block text-xs font-medium mb-1 text-gray-400">Book Value</label>
-                <span id="${side}BookLS-${id}" class="font-bold text-gray-300 text-sm block py-2">0.00 LS</span>
+                <span id="${side}BookLS-${id}" class="font-bold text-gray-300 text-sm block py-2 text-center">0.00 LS</span>
             </div>
-            <div class="w-full sm:w-36 shrink-0">
-                <label class="flex items-center justify-between text-xs font-medium mb-1 text-gray-400">
+            <div>
+                <label class="flex items-center justify-between text-xs font-medium mb-1 text-gray-400 gap-1">
                     <span>Price</span>
-                    <button type="button" data-side="${side}" data-id="${id}" class="reset-price-btn text-amber-500 hover:text-amber-400 text-[10px] underline">reset</button>
+                    <button type="button" data-side="${side}" data-id="${id}" class="reset-price-btn text-amber-500 hover:text-amber-400 text-[10px] underline shrink-0">reset</button>
                 </label>
-                <input type="number" id="${side}Price-${id}" min="0" step="0.01" value="0"
+                <input type="number" id="${side}Price-${id}" min="0" step="0.01" value="${priceValue}"
                     class="w-full p-2 bg-gray-700 border border-amber-700/50 rounded-md text-sm text-center font-bold text-amber-300">
             </div>
-            <button data-side="${side}" data-id="${id}" class="remove-row-btn text-red-500 hover:text-red-400 text-sm font-bold shrink-0 sm:pt-6">
-                Remove
-            </button>
+            <div>
+                <label class="block text-xs font-medium mb-1 text-transparent select-none">Remove</label>
+                <button data-side="${side}" data-id="${id}" class="remove-row-btn w-full py-2 bg-red-900/40 border border-red-800 rounded-md text-red-400 hover:text-red-300 hover:bg-red-900/60 text-sm font-bold transition">
+                    Remove
+                </button>
+            </div>
         </div>
 
         <div id="${side}GearControls-${id}" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-800 hidden">
@@ -470,6 +479,14 @@ function renderRows(side) {
         container.innerHTML = rows[side].map(r => createRowHTML(side, r)).join('');
     }
     attachRowListeners(side);
+
+    // Restore each row's gear panel + book/price values now that the
+    // markup exists again — createRowHTML only lays out static state
+    // (name, qty, price), the dynamic gear UI has to be re-applied.
+    rows[side].forEach(row => {
+        updateRowGearControls(side, row);
+        recalculateRow(side, row);
+    });
 }
 
 function attachRowListeners(side) {
