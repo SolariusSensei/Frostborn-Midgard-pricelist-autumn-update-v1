@@ -290,8 +290,8 @@ async function loadAdminPanel() {
         contentEl.innerHTML = '<p class="text-red-400">Not logged in.</p>';
         return;
     }
-
-    const suggestions = await supabaseFetch('suggestions?select=*&status=eq.pending&order=created_at.desc');
+    
+const suggestions = await supabaseFetch('suggestions?select=*&status=eq.pending&order=created_at.desc');
     if (!suggestions.length) {
         contentEl.innerHTML = '<p class="text-gray-400">No pending suggestions.</p>';
         return;
