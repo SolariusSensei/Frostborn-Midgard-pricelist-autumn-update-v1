@@ -90,9 +90,12 @@
 <div id="adminModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
     <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold gold-text">Admin — Pending Price Suggestions</h2>
-            <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
-        </div>
+    <h2 class="text-2xl font-bold gold-text">Admin — Pending Price Suggestions</h2>
+    <div class="flex gap-3 items-center">
+        <button onclick="openGuideImportModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">📄 Import Guide</button>
+        <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
+    </div>
+</div>
         <div id="adminPanelContent" class="space-y-4 text-sm text-gray-300">Loading...</div>
         <button onclick="closeAdminModal()" class="w-full mt-8 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg transition">Close</button>
     </div>
