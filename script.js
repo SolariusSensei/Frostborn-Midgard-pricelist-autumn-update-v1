@@ -148,6 +148,138 @@ function closeAdminLoginModal() {
 function closeAdminModal() {
     document.getElementById('adminModal').classList.add('hidden');
 }
+let guideImportRows = [];
+
+function openGuideImportModal() {
+    document.getElementById('guideImportModal').classList.remove('hidden');
+    document.getElementById('guideImportText').value = '';
+    document.getElementById('guideImportPreview').innerHTML = '';
+    document.getElementById('guideImportStatus').textContent = '';
+    document.getElementById('guideNameCol').innerHTML = '';
+    document.getElementById('guidePriceCol').innerHTML = '';
+    guideImportRows = [];
+}
+
+function closeGuideImportModal() {
+    document.getElementById('guideImportModal').classList.add('hidden');
+}
+
+function parseGuidePastedText(text) {
+    const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().length > 0);
+    if (!lines.length) return [];
+    const delimiter = lines[0].includes('\t') ? '\t' : ',';
+    return lines.map(line => line.split(delimiter).map(cell => cell.trim()));
+}
+
+function handleGuideImportTextInput() {
+    const text = document.getElementById('guideImportText').value;
+    guideImportRows = parseGuidePastedText(text);
+
+    const nameSelect  = document.getElementById('guideNameCol');
+    const priceSelect = document.getElementById('guidePriceCol');
+
+    if (!guideImportRows.length) {
+        nameSelect.innerHTML  = '';
+        priceSelect.innerHTML = '';
+        document.getElementById('guideImportPreview').innerHTML = '';
+        return;
+    }
+
+    const hasHeader   = document.getElementById('guideHasHeader').checked;
+    const columnCount = guideImportRows[0].length;
+    const headerRow   = hasHeader ? guideImportRows[0] : null;
+
+    const optionsHtml = Array.from({ length: columnCount }, (_, i) => {
+        const label = headerRow ? `${headerRow[i] || '(blank)'} (col ${i + 1})` : `Column ${i + 1}`;
+        return `<option value="${i}">${label}</option>`;
+    }).join('');
+
+    nameSelect.innerHTML  = optionsHtml;
+    priceSelect.innerHTML = optionsHtml;
+    if (columnCount > 1) priceSelect.value = 1;
+
+    renderGuideImportPreview();
+}
+
+function renderGuideImportPreview() {
+    const preview = document.getElementById('guideImportPreview');
+    if (!guideImportRows.length) { preview.innerHTML = ''; return; }
+
+    const hasHeader = document.getElementById('guideHasHeader').checked;
+    const nameIdx   = Number(document.getElementById('guideNameCol').value);
+    const priceIdx  = Number(document.getElementById('guidePriceCol').value);
+    const dataRows  = hasHeader ? guideImportRows.slice(1) : guideImportRows;
+
+    const parsed = dataRows.map(cols => {
+        const name  = (cols[nameIdx] || '').trim();
+        const price = Number((cols[priceIdx] || '').replace(/[^0-9.\-]/g, ''));
+        const valid = name.length > 0 && Number.isFinite(price) && price > 0;
+        return { name, price, valid };
+    });
+
+    const validCount = parsed.filter(r => r.valid).length;
+
+    preview.innerHTML = `
+        <p class="text-xs text-gray-400 mb-2">${validCount} of ${parsed.length} rows look valid (highlighted). Invalid rows are skipped on import.</p>
+        <div class="max-h-52 overflow-y-auto custom-scrollbar border border-gray-700 rounded-md">
+            <table class="w-full text-xs">
+                <tbody>
+                    ${parsed.map(r => `
+                        <tr class="${r.valid ? '' : 'opacity-50'} border-b border-gray-800">
+                            <td class="p-1.5 ${r.valid ? 'text-gray-200' : 'text-red-400'}">${r.name || '(blank)'}</td>
+                            <td class="p-1.5 text-right ${r.valid ? 'text-amber-300' : 'text-red-400'}">${Number.isFinite(r.price) ? r.price : 'invalid'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>`;
+
+    document.getElementById('guideImportSubmit').textContent = `Import ${validCount} Suggestion${validCount === 1 ? '' : 's'}`;
+    document.getElementById('guideImportSubmit').disabled = validCount === 0;
+}
+
+async function submitGuideImport() {
+    const hasHeader = document.getElementById('guideHasHeader').checked;
+    const nameIdx   = Number(document.getElementById('guideNameCol').value);
+    const priceIdx  = Number(document.getElementById('guidePriceCol').value);
+    const dataRows  = hasHeader ? guideImportRows.slice(1) : guideImportRows;
+    const statusEl  = document.getElementById('guideImportStatus');
+
+    const validRows = dataRows
+        .map(cols => ({
+            item_name: (cols[nameIdx] || '').trim(),
+            price: Number((cols[priceIdx] || '').replace(/[^0-9.\-]/g, ''))
+        }))
+        .filter(r => r.item_name.length > 0 && Number.isFinite(r.price) && r.price > 0);
+
+    if (!validRows.length) {
+        statusEl.textContent = 'No valid rows to import.';
+        statusEl.className   = 'text-red-400 text-sm mt-2';
+        return;
+    }
+
+    statusEl.textContent = 'Importing...';
+    statusEl.className   = 'text-gray-400 text-sm mt-2';
+
+    const ok = await callAdminAction('bulkImportSuggestions', {
+        rows: validRows,
+        serverId: currentServerId
+    });
+
+    if (ok) {
+        statusEl.textContent = `Imported ${validRows.length} suggestions — review them in the queue below.`;
+        statusEl.className   = 'text-green-400 text-sm mt-2';
+        await loadAdminPanel();
+        setTimeout(closeGuideImportModal, 1500);
+    } else {
+        statusEl.textContent = 'Import failed. See console for details.';
+        statusEl.className   = 'text-red-400 text-sm mt-2';
+    }
+}
+
+window.openGuideImportModal  = openGuideImportModal;
+window.closeGuideImportModal = closeGuideImportModal;
+window.submitGuideImport     = submitGuideImport;
 
 async function loadAdminPanel() {
     const contentEl = document.getElementById('adminPanelContent');
@@ -1061,7 +1193,10 @@ function attachStaticListeners() {
 
     document.getElementById('suggestItemName')
         .addEventListener('input', handleSuggestItemSearch);
-
+document.getElementById('guideImportText').addEventListener('input', handleGuideImportTextInput);
+document.getElementById('guideHasHeader').addEventListener('change', handleGuideImportTextInput);
+document.getElementById('guideNameCol').addEventListener('change', renderGuideImportPreview);
+document.getElementById('guidePriceCol').addEventListener('change', renderGuideImportPreview);
     // Hidden admin trigger: click bottom-left corner 3 times in 2s to open login modal
     let clickCount = 0;
     let clickTimer = null;
