@@ -1,0 +1,28 @@
+/* Market Ledger — extends style.css, doesn't replace it */
+
+#marketTableBody tr {
+    border-top: 1px solid #374151;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+#marketTableBody tr:hover {
+    background-color: #374151;
+}
+
+.pct-up   { color: #10b981; font-weight: 700; }
+.pct-down { color: #ef4444; font-weight: 700; }
+.pct-flat { color: var(--color-text-medium); font-weight: 600; }
+
+.index-up   { color: #10b981; }
+.index-down { color: #ef4444; }
+.index-flat { color: var(--color-text-medium); }
+
+.category-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 9999px;
+    background-color: rgba(252, 211, 77, 0.12);
+    color: var(--color-secondary);
+    font-weight: 600;
+}
