@@ -100,7 +100,44 @@
         <button onclick="closeAdminModal()" class="w-full mt-8 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg transition">Close</button>
     </div>
 </div>
+<!-- Guide Import Modal (admin-only) -->
+<div id="guideImportModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+        <h2 class="text-2xl font-bold gold-text mb-2">Import Guide / Spreadsheet</h2>
+        <p class="text-gray-400 text-sm mb-4">Copy cells from a spreadsheet or guide (Google Sheets, Excel, etc.) and paste below. Tab- or comma-separated both work.</p>
 
+        <textarea id="guideImportText" rows="6" placeholder="Item Name&#9;Price&#10;Bronze Sword&#9;120&#10;Iron Shield&#9;340"
+            class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar mb-3"></textarea>
+
+        <label class="flex items-center gap-2 text-sm text-gray-400 mb-3">
+            <input type="checkbox" id="guideHasHeader" checked class="rounded">
+            First row is a header (not data)
+        </label>
+
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+                <label class="block text-xs font-medium mb-1 text-gray-400">Item Name Column</label>
+                <select id="guideNameCol" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1 text-gray-400">Price Column</label>
+                <select id="guidePriceCol" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm"></select>
+            </div>
+        </div>
+
+        <div id="guideImportPreview" class="mb-4"></div>
+
+        <p id="guideImportStatus" class="text-sm mb-2"></p>
+
+        <div class="flex gap-4">
+            <button id="guideImportSubmit" onclick="submitGuideImport()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                Import 0 Suggestions
+            </button>
+            <button onclick="closeGuideImportModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+        </div>
+    </div>
+</div>
+    
     <!-- Copy Trade Modal -->
     <div id="copyTradeModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl">
