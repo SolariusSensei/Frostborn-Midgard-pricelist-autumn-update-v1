@@ -909,7 +909,33 @@ function closeCopyTradeModal() {
     document.getElementById('copyTradeModal').classList.add('hidden');
 }
 
+async function logTradeObservations() {
+    const tradeId = crypto.randomUUID();
+    const observationRows = [];
+
+    SIDES.forEach(side => {
+        rows[side].filter(r => r.name).forEach(row => {
+            const price = row.priceTouched
+                ? row.customPrice
+                : calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
+
+            observationRows.push({
+                trade_id: tradeId,
+                server_id: currentServerId,
+                side,
+                item_name: row.name,
+                quantity: row.quantity,
+                total_price_ls: price
+            });
+        });
+    });
+
+    if (!observationRows.length) return;
+    await supabaseInsert('trade_observations', observationRows);
+}
+
 async function copyTradeToClipboard() {
+    logTradeObservations();
     const textarea = document.getElementById('copyTradeText');
     const statusEl = document.getElementById('copyTradeStatus');
     const text     = textarea.value;
