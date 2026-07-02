@@ -3,94 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Midgard Market — Price History</title>
+    <title>Midgard Market Ledger</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="market.css">
 </head>
 <body>
 
 <div id="app" class="p-4 lg:p-6 max-w-6xl mx-auto">
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900/80 z-50 flex items-center justify-center hidden">
+        <div class="text-center">
+            <div class="text-amber-400 text-2xl font-bold mb-2">Loading market...</div>
+            <div class="text-gray-400 text-sm">Fetching price history</div>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <a href="index.html" class="text-gray-400 hover:text-amber-400 text-sm font-semibold transition">&larr; Back to Trade Builder</a>
-        <div class="sm:ml-auto flex items-center gap-3">
-            <label class="text-gray-400 font-semibold text-sm">Server:</label>
-            <select id="serverSelector" class="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
+        <div class="flex items-center gap-3">
+            <label class="text-gray-400 font-semibold">Server:</label>
+            <select id="serverSelector" class="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
         </div>
+        <a href="index.html" class="sm:ml-auto text-sm text-blue-300 hover:text-blue-200 underline">&larr; Back to Trade Builder</a>
     </div>
 
     <div class="mb-8 text-center">
-        <h1 class="text-4xl font-extrabold gold-text">Market</h1>
-        <p class="text-gray-400 text-sm mt-1">Historical price movement, sourced from approved suggestions. No predictions — just what happened.</p>
+        <h1 class="text-4xl font-extrabold gold-text">Market Ledger</h1>
+        <p class="text-gray-400 text-sm mt-1">Historical fact only — no forecasts. Every number here is a price that was actually approved.</p>
     </div>
 
-    <!-- Market Index (optional overall chart) -->
-    <div id="marketIndexCard" class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 hidden">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h2 class="text-xl font-bold gold-text">Economy Index</h2>
-            <div id="marketIndexStat" class="text-sm text-gray-400"></div>
+    <!-- Market Index -->
+    <div id="marketIndexRow" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700 text-center">
+            <div class="text-xs text-gray-400 mb-1">Items Tracked</div>
+            <div id="indexItemCount" class="text-2xl font-bold text-gray-200">—</div>
         </div>
-        <div style="height: 220px;">
-            <canvas id="marketIndexChart"></canvas>
+        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700 text-center">
+            <div class="text-xs text-gray-400 mb-1">Market Index (7d)</div>
+            <div id="indexChange7d" class="text-2xl font-bold">—</div>
         </div>
-        <p class="text-xs text-gray-500 mt-2">Average % change across all tracked items, snapshotted daily.</p>
+        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700 text-center">
+            <div class="text-xs text-gray-400 mb-1">Market Index (30d)</div>
+            <div id="indexChange30d" class="text-2xl font-bold">—</div>
+        </div>
     </div>
+    <p class="text-center text-xs text-gray-600 -mt-6 mb-8">Index = average % change across all tracked items. Not weighted by trade volume.</p>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-        <input id="itemSearch" type="text" placeholder="Filter by item name..."
-            class="flex-1 min-w-[180px] p-2 bg-gray-800 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-        <select id="categoryFilter" class="bg-gray-800 border border-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-            <option value="">All categories</option>
+    <!-- Filter Bar -->
+    <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 mb-4 flex flex-col sm:flex-row gap-3">
+        <input id="marketSearch" type="text" placeholder="Search items..."
+            class="flex-1 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+        <select id="categoryFilter" class="p-2 bg-gray-700 border border-gray-600 rounded-md text-sm">
+            <option value="">All Categories</option>
+            <option value="W">Weapons</option>
+            <option value="A">Armor</option>
+            <option value="P">Pieces</option>
+            <option value="F">Food</option>
+            <option value="G">General</option>
         </select>
-        <select id="sortSelector" class="bg-gray-800 border border-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="pct7-desc">7d: Biggest gainers</option>
-            <option value="pct7-asc">7d: Biggest losers</option>
-            <option value="pct30-desc">30d: Biggest gainers</option>
-            <option value="pct30-asc">30d: Biggest losers</option>
-            <option value="price-desc">Price: High to low</option>
-            <option value="price-asc">Price: Low to high</option>
+        <select id="sortBy" class="p-2 bg-gray-700 border border-gray-600 rounded-md text-sm">
+            <option value="name">Sort: Name (A-Z)</option>
+            <option value="price">Sort: Price (High-Low)</option>
+            <option value="gainers7d">Sort: Biggest Gainers (7d)</option>
+            <option value="losers7d">Sort: Biggest Losers (7d)</option>
+            <option value="gainers30d">Sort: Biggest Gainers (30d)</option>
+            <option value="losers30d">Sort: Biggest Losers (30d)</option>
         </select>
     </div>
 
     <!-- Table -->
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-sm text-left">
-                <thead class="bg-gray-900/60 text-gray-400 uppercase text-xs">
-                    <tr>
-                        <th class="px-4 py-3">Item</th>
-                        <th class="px-4 py-3">Category</th>
-                        <th class="px-4 py-3 text-right">Current Price</th>
-                        <th class="px-4 py-3 text-right">7d %</th>
-                        <th class="px-4 py-3 text-right">30d %</th>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-900/60 text-left text-gray-400 text-xs uppercase tracking-wide">
+                        <th class="p-3">Item</th>
+                        <th class="p-3">Category</th>
+                        <th class="p-3 text-right">Current Price</th>
+                        <th class="p-3 text-right">7d Change</th>
+                        <th class="p-3 text-right">30d Change</th>
                     </tr>
                 </thead>
-                <tbody id="marketTableBody" class="divide-y divide-gray-700">
-                    <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Loading market data...</td></tr>
-                </tbody>
+                <tbody id="marketTableBody"></tbody>
             </table>
         </div>
+        <p id="marketEmptyState" class="text-gray-500 text-sm text-center py-8 hidden">No items match your filters.</p>
     </div>
-    <p id="emptyState" class="text-center text-gray-500 text-sm mt-6 hidden">No items match your filters.</p>
 
-    <!-- Drill-down Modal -->
-    <div id="itemHistoryModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+    <!-- Item History Modal -->
+    <div id="historyModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h2 id="itemHistoryTitle" class="text-2xl font-bold gold-text">Item</h2>
-                    <p id="itemHistorySubtitle" class="text-gray-400 text-sm mt-1"></p>
+                    <h2 id="historyModalTitle" class="text-2xl font-bold gold-text">Item</h2>
+                    <p id="historyModalSubtitle" class="text-gray-400 text-sm mt-1"></p>
                 </div>
-                <button onclick="closeItemHistoryModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                <button onclick="closeHistoryModal()" class="text-gray-500 hover:text-gray-300 text-2xl leading-none">&times;</button>
             </div>
-            <div style="height: 280px;">
-                <canvas id="itemHistoryChart"></canvas>
+            <div class="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                <canvas id="historyChart" height="240"></canvas>
             </div>
-            <div id="itemHistoryEmpty" class="text-center text-gray-500 text-sm mt-4 hidden">No price history recorded yet for this item.</div>
+            <p id="historyEmptyState" class="text-gray-500 text-sm text-center py-8 hidden">No price history recorded yet for this item.</p>
+            <button onclick="closeHistoryModal()" class="w-full mt-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Close</button>
         </div>
     </div>
 
