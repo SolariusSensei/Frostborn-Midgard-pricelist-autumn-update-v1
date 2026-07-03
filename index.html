@@ -98,6 +98,12 @@
         <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
     </div>
 </div>
+        <div class="mb-4">
+            <button id="runSolverBtn" onclick="runPricingSolver()" class="w-full py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition text-sm">
+                🧮 Run Pricing Solver
+            </button>
+            <p id="solverStatus" class="text-sm mt-2"></p>
+        </div>
         <div id="adminPanelContent" class="space-y-4 text-sm text-gray-300">Loading...</div>
         <button onclick="closeAdminModal()" class="w-full mt-8 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg transition">Close</button>
     </div>
@@ -343,6 +349,6 @@ IcyWolf:
     </div>
 </div>
     
-<script type="module" src="script.js?v=3"></script>
+<script type="module" src="script.js?v=4"></script>
 </body>
 </html>
