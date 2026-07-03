@@ -1,0 +1,120 @@
+// =============================================================
+// ALIAS DICTIONARY (admin-only, via addAlias/removeAlias edge actions)
+// =============================================================
+
+let selectedAliasItemName = null;
+
+function openAliasModal() {
+    document.getElementById('aliasModal').classList.remove('hidden');
+    document.getElementById('newAliasText').value = '';
+    document.getElementById('aliasItemSearch').value = '';
+    document.getElementById('aliasItemSelected').textContent = 'none';
+    document.getElementById('aliasAddStatus').textContent = '';
+    selectedAliasItemName = null;
+    updateAddAliasButtonState();
+    loadAliasList();
+}
+
+function closeAliasModal() {
+    document.getElementById('aliasModal').classList.add('hidden');
+}
+
+function handleAliasItemSearchInput(event) {
+    const query = event.target.value.trim().toLowerCase();
+    const resultsDiv = document.getElementById('aliasItemSearchResults');
+    if (query.length < 2) { resultsDiv.classList.add('hidden'); return; }
+
+    const matches = Object.keys(ITEM_DATABASE).filter(n => n.toLowerCase().includes(query));
+    if (!matches.length) {
+        resultsDiv.innerHTML = '<div class="p-2 text-sm text-gray-400">No items found.</div>';
+        resultsDiv.classList.remove('hidden');
+        return;
+    }
+
+    resultsDiv.innerHTML = matches.map(name => {
+        const data  = getItemData(name);
+        const color = getRarityColor(data.rarity);
+        const safe  = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
+        <div class="search-result-item" onclick="selectAliasItem('${safe}')">
+            <div class="search-result-name">
+                <div class="rarity-dot" style="background-color:${color};"></div>
+                <span>${name}</span>
+            </div>
+            <span class="search-result-price" style="background-color:${color};">${formatLS(data.price)}</span>
+        </div>`;
+    }).join('');
+    resultsDiv.classList.remove('hidden');
+}
+
+function selectAliasItem(name) {
+    selectedAliasItemName = name;
+    document.getElementById('aliasItemSelected').textContent = name;
+    document.getElementById('aliasItemSearch').value = '';
+    document.getElementById('aliasItemSearchResults').classList.add('hidden');
+    updateAddAliasButtonState();
+}
+
+function updateAddAliasButtonState() {
+    const aliasText = document.getElementById('newAliasText').value.trim();
+    document.getElementById('addAliasBtn').disabled = !(aliasText && selectedAliasItemName);
+}
+
+async function submitNewAlias() {
+    const aliasText = document.getElementById('newAliasText').value.trim();
+    const statusEl  = document.getElementById('aliasAddStatus');
+
+    if (!aliasText || !selectedAliasItemName) return;
+
+    statusEl.textContent = 'Adding...';
+    statusEl.className   = 'text-gray-400 text-sm mb-2';
+
+    const ok = await callAdminAction('addAlias', {
+        alias: aliasText,
+        itemName: selectedAliasItemName,
+        serverId: currentServerId
+    });
+
+    if (ok) {
+        statusEl.textContent = 'Alias added.';
+        statusEl.className   = 'text-green-400 text-sm mb-2';
+        document.getElementById('newAliasText').value = '';
+        selectedAliasItemName = null;
+        document.getElementById('aliasItemSelected').textContent = 'none';
+        updateAddAliasButtonState();
+        await loadAliasList();
+    } else {
+        statusEl.textContent = 'Failed to add alias.';
+        statusEl.className   = 'text-red-400 text-sm mb-2';
+    }
+}
+
+async function loadAliasList() {
+    const container = document.getElementById('aliasListContainer');
+    container.innerHTML = 'Loading...';
+
+    const aliases = await supabaseFetch(`item_aliases?select=*&server_id=eq.${currentServerId}&order=alias`);
+
+    if (!aliases.length) {
+        container.innerHTML = '<p class="text-gray-500">No aliases yet.</p>';
+        return;
+    }
+
+    container.innerHTML = aliases.map(a => `
+        <div class="flex justify-between items-center bg-gray-900 px-3 py-2 rounded-md">
+            <div><span class="text-gray-200 font-medium">${a.alias}</span> <span class="text-gray-500">&rarr;</span> <span class="text-amber-300">${a.item_name}</span></div>
+            <button onclick="removeAlias(${a.id})" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
+        </div>
+    `).join('');
+}
+
+async function removeAlias(aliasId) {
+    const ok = await callAdminAction('removeAlias', { aliasId });
+    if (ok) await loadAliasList();
+}
+
+window.openAliasModal  = openAliasModal;
+window.closeAliasModal = closeAliasModal;
+window.selectAliasItem = selectAliasItem;
+window.submitNewAlias  = submitNewAlias;
+window.removeAlias     = removeAlias;
