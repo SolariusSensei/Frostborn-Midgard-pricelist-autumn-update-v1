@@ -452,15 +452,61 @@ function resolveItemName(text) {
     return null; // unresolved — admin must pick manually in the preview
 }
 
+function parseQuantityAndItem(text) {
+    let qty = 1, itemText = text.trim();
+    const leadQtyX     = itemText.match(/^(\d+)\s*x\s*(.+)$/i);
+    const trailQtyX    = itemText.match(/^(.+?)\s*x\s*(\d+)$/i);
+    const leadQtyPlain = itemText.match(/^(\d+)\s+(.+)$/);
+    if (leadQtyX) {
+        qty = Number(leadQtyX[1]);
+        itemText = leadQtyX[2].trim();
+    } else if (trailQtyX) {
+        qty = Number(trailQtyX[2]);
+        itemText = trailQtyX[1].trim();
+    } else if (leadQtyPlain) {
+        qty = Number(leadQtyPlain[1]);
+        itemText = leadQtyPlain[2].trim();
+    }
+    return { qty, itemText };
+}
+
 function parseTradeChatText(text) {
     const lines = text.replace(/\r/g, '').split('\n');
     const results = [];
     let currentSide = null;
 
+    function pushLeg(side, rawText, qty, itemText) {
+        parsedLineSeq += 1;
+        const id = parsedLineSeq;
+
+        const lsMatch = itemText.match(/^(\d+(?:\.\d+)?)\s*ls$/i);
+        if (lsMatch) {
+            results.push({ id, side, rawText, quantity: 1, isLS: true, priceLS: Number(lsMatch[1]), resolvedName: 'LS' });
+            return;
+        }
+
+        results.push({ id, side, rawText, quantity: qty, isLS: false, priceLS: null, resolvedName: resolveItemName(itemText) });
+    }
+
     lines.forEach(rawLine => {
         const line = rawLine.trim();
         if (!line) return;
 
+        // Format B: "Label:- item + item + item" (e.g. real Discord trade logs
+        // like "Him:- 270 Orbs" / "Me:- 3 Medium Ymir + 3 Light Ymir Sets")
+        const inlineMatch = line.match(/^(\S+):-\s*(.+)$/);
+        if (inlineMatch) {
+            const side = inlineMatch[1].trim();
+            inlineMatch[2].split('+').forEach(part => {
+                const trimmedPart = part.trim();
+                if (!trimmedPart) return;
+                const { qty, itemText } = parseQuantityAndItem(trimmedPart);
+                pushLeg(side, trimmedPart, qty, itemText);
+            });
+            return;
+        }
+
+        // Format A: "Label:" header line, followed by one item per line
         const looksLikeItemOrPrice =
             /^\d+\s*x\s*.+/i.test(line) ||
             /^.+\s*x\s*\d+$/i.test(line) ||
@@ -472,43 +518,15 @@ function parseTradeChatText(text) {
             return;
         }
 
-        if (!currentSide) return; // ignore stray lines before the first side header
+        if (!currentSide) return; // stray line with no side context (e.g. "Trade #124", "Successful trade with @X") — safely ignored
 
-        parsedLineSeq += 1;
-        const id = parsedLineSeq;
-
-        const lsMatch = line.match(/^(\d+(?:\.\d+)?)\s*ls$/i);
-        if (lsMatch) {
-            results.push({
-                id, side: currentSide, rawText: line, quantity: 1,
-                isLS: true, priceLS: Number(lsMatch[1]), resolvedName: 'LS'
-            });
-            return;
-        }
-
-      let qty = 1, itemText = line;
-        const leadQtyX     = line.match(/^(\d+)\s*x\s*(.+)$/i);
-        const trailQtyX    = line.match(/^(.+?)\s*x\s*(\d+)$/i);
-        const leadQtyPlain = line.match(/^(\d+)\s+(.+)$/);
-        if (leadQtyX) {
-            qty = Number(leadQtyX[1]);
-            itemText = leadQtyX[2].trim();
-        } else if (trailQtyX) {
-            qty = Number(trailQtyX[2]);
-            itemText = trailQtyX[1].trim();
-        } else if (leadQtyPlain) {
-            qty = Number(leadQtyPlain[1]);
-            itemText = leadQtyPlain[2].trim();
-        }
-
-        results.push({
-            id, side: currentSide, rawText: line, quantity: qty,
-            isLS: false, priceLS: null, resolvedName: resolveItemName(itemText)
-        });
+        const { qty, itemText } = parseQuantityAndItem(line);
+        pushLeg(currentSide, line, qty, itemText);
     });
 
     return results;
 }
+
 
 function renderChatParserPreview() {
     const preview = document.getElementById('chatParserPreview');
