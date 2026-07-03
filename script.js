@@ -102,7 +102,7 @@ async function callAdminAction(action, payload) {
             alert(data.error || 'Action failed.');
             return false;
         }
-        return true;
+        return data;
     } catch (err) {
         console.error('callAdminAction failed:', err);
         return false;
@@ -595,6 +595,37 @@ window.openChatParserModal      = openChatParserModal;
 window.closeChatParserModal     = closeChatParserModal;
 window.setParsedLineResolution  = setParsedLineResolution;
 window.submitChatParsedTrade    = submitChatParsedTrade;
+// =============================================================
+// PRICING SOLVER (admin-only, via runPricingSolver edge action)
+// =============================================================
+
+async function runPricingSolver() {
+    const statusEl = document.getElementById('solverStatus');
+    const btn = document.getElementById('runSolverBtn');
+
+    statusEl.textContent = 'Running solver — this may take a moment...';
+    statusEl.className   = 'text-gray-400 text-sm mt-2';
+    btn.disabled = true;
+
+    const data = await callAdminAction('runPricingSolver', { serverId: currentServerId });
+
+    btn.disabled = false;
+
+    if (data && data.result) {
+        const { itemsUpdated, tradesUsed, unsolvedTrades } = data.result;
+        statusEl.textContent =
+            `Done: ${itemsUpdated} item suggestion(s) from ${tradesUsed} usable trade(s). ` +
+            `${unsolvedTrades} trade(s) skipped (too many unknowns in one trade).`;
+        statusEl.className = 'text-green-400 text-sm mt-2';
+        await loadAdminPanel();
+    } else {
+        statusEl.textContent = 'Solver failed. See console for details.';
+        statusEl.className   = 'text-red-400 text-sm mt-2';
+    }
+}
+
+window.runPricingSolver = runPricingSolver;
+
 async function loadAdminPanel() {
     const contentEl = document.getElementById('adminPanelContent');
     contentEl.innerHTML = 'Loading...';
