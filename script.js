@@ -400,7 +400,197 @@ window.closeAliasModal = closeAliasModal;
 window.selectAliasItem = selectAliasItem;
 window.submitNewAlias  = submitNewAlias;
 window.removeAlias     = removeAlias;
+// =============================================================
+// CHAT PARSER (admin-only, via submitParsedTrade edge action)
+// ---------------------------------------------------------------
+// Template-based, not free-form NLP: the admin reformats a real
+// trade into "Side Label:" headers followed by item lines, and
+// this resolves item names via ITEM_DATABASE + the alias
+// dictionary before recording it as raw trade_observations for
+// the future pricing solver to interpret.
+// =============================================================
 
+let parsedTradeLines  = []; // { id, side, rawText, quantity, isLS, priceLS, resolvedName }
+let parsedLineSeq     = 0;
+let currentAliasLookup = {}; // lowercase alias -> real item name, for this server
+
+async function loadAliasLookupForParser() {
+    const aliases = await supabaseFetch(`item_aliases?select=alias,item_name&server_id=eq.${currentServerId}`);
+    currentAliasLookup = {};
+    aliases.forEach(a => { currentAliasLookup[a.alias] = a.item_name; });
+}
+
+async function openChatParserModal() {
+    document.getElementById('chatParserModal').classList.remove('hidden');
+    document.getElementById('chatParserText').value = '';
+    document.getElementById('chatParserPreview').innerHTML = '';
+    document.getElementById('chatParserStatus').textContent = '';
+    parsedTradeLines = [];
+    parsedLineSeq = 0;
+    await loadAliasLookupForParser();
+    updateChatParserSubmitState();
+}
+
+function closeChatParserModal() {
+    document.getElementById('chatParserModal').classList.add('hidden');
+}
+
+function handleChatParserTextInput() {
+    const text = document.getElementById('chatParserText').value;
+    parsedTradeLines = parseTradeChatText(text);
+    renderChatParserPreview();
+}
+
+function resolveItemName(text) {
+    const clean = text.trim().toLowerCase();
+    const exact = Object.keys(ITEM_DATABASE).find(n => n.toLowerCase() === clean);
+    if (exact) return exact;
+
+    const alias = currentAliasLookup[clean];
+    if (alias) return alias;
+
+    return null; // unresolved — admin must pick manually in the preview
+}
+
+function parseTradeChatText(text) {
+    const lines = text.replace(/\r/g, '').split('\n');
+    const results = [];
+    let currentSide = null;
+
+    lines.forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+
+        const looksLikeItemOrPrice =
+            /^\d+\s*x\s*.+/i.test(line) ||
+            /^.+\s*x\s*\d+$/i.test(line) ||
+            /^\d+(\.\d+)?\s*ls$/i.test(line);
+
+        const headerMatch = line.match(/^(.+):\s*$/);
+        if (headerMatch && !looksLikeItemOrPrice) {
+            currentSide = headerMatch[1].trim();
+            return;
+        }
+
+        if (!currentSide) return; // ignore stray lines before the first side header
+
+        parsedLineSeq += 1;
+        const id = parsedLineSeq;
+
+        const lsMatch = line.match(/^(\d+(?:\.\d+)?)\s*ls$/i);
+        if (lsMatch) {
+            results.push({
+                id, side: currentSide, rawText: line, quantity: 1,
+                isLS: true, priceLS: Number(lsMatch[1]), resolvedName: 'LS'
+            });
+            return;
+        }
+
+        let qty = 1, itemText = line;
+        const leadQty  = line.match(/^(\d+)\s*x\s*(.+)$/i);
+        const trailQty = line.match(/^(.+?)\s*x\s*(\d+)$/i);
+        if (leadQty) {
+            qty = Number(leadQty[1]);
+            itemText = leadQty[2].trim();
+        } else if (trailQty) {
+            qty = Number(trailQty[2]);
+            itemText = trailQty[1].trim();
+        }
+
+        results.push({
+            id, side: currentSide, rawText: line, quantity: qty,
+            isLS: false, priceLS: null, resolvedName: resolveItemName(itemText)
+        });
+    });
+
+    return results;
+}
+
+function renderChatParserPreview() {
+    const preview = document.getElementById('chatParserPreview');
+    if (!parsedTradeLines.length) {
+        preview.innerHTML = '<p class="text-gray-500 text-sm">Nothing parsed yet — paste chat above using the template format.</p>';
+        updateChatParserSubmitState();
+        return;
+    }
+
+    preview.innerHTML = parsedTradeLines.map(line => {
+        if (line.isLS) {
+            return `
+            <div class="flex justify-between items-center bg-gray-900 px-3 py-2 rounded-md border border-gray-700">
+                <div class="text-xs"><span class="text-gray-500">${line.side}:</span> <span class="text-amber-300 font-semibold">${line.priceLS} LS (currency)</span></div>
+                <span class="text-[10px] text-gray-600">recorded as-is</span>
+            </div>`;
+        }
+
+        const resolved = line.resolvedName;
+        return `
+        <div class="flex justify-between items-center gap-2 bg-gray-900 px-3 py-2 rounded-md border ${resolved ? 'border-gray-700' : 'border-red-800'}">
+            <div class="text-xs flex-1 min-w-0">
+                <span class="text-gray-500">${line.side}:</span>
+                <span class="text-gray-300">${line.quantity}x "${line.rawText}"</span>
+                ${resolved ? `<span class="text-green-400"> &rarr; ${resolved}</span>` : `<span class="text-red-400"> &rarr; unresolved</span>`}
+            </div>
+            <select onchange="setParsedLineResolution(${line.id}, this.value)" class="bg-gray-700 border border-gray-600 rounded-md text-xs p-1 shrink-0">
+                <option value="">${resolved ? 'change...' : '-- pick item --'}</option>
+                ${Object.keys(ITEM_DATABASE).sort().map(n => `<option value="${n}" ${n === resolved ? 'selected' : ''}>${n}</option>`).join('')}
+            </select>
+        </div>`;
+    }).join('');
+
+    updateChatParserSubmitState();
+}
+
+function setParsedLineResolution(id, value) {
+    const line = parsedTradeLines.find(l => l.id === id);
+    if (!line) return;
+    line.resolvedName = value || null;
+    renderChatParserPreview();
+}
+
+function updateChatParserSubmitState() {
+    const resolvedLines = parsedTradeLines.filter(l => l.isLS || l.resolvedName);
+    const sides = new Set(resolvedLines.map(l => l.side));
+    const btn = document.getElementById('chatParserSubmit');
+    const ready = resolvedLines.length > 0 && sides.size >= 2;
+    btn.disabled = !ready;
+    btn.textContent = ready
+        ? `Submit Trade (${resolvedLines.length} lines, ${sides.size} sides)`
+        : 'Need at least 2 sides with resolved items';
+}
+
+async function submitChatParsedTrade() {
+    const statusEl = document.getElementById('chatParserStatus');
+    const legs = parsedTradeLines
+        .filter(l => l.isLS || l.resolvedName)
+        .map(l => ({
+            side: l.side,
+            item_name: l.isLS ? 'LS' : l.resolvedName,
+            quantity: l.quantity,
+            price_ls: l.isLS ? l.priceLS : null
+        }));
+
+    if (!legs.length) return;
+
+    statusEl.textContent = 'Submitting...';
+    statusEl.className   = 'text-gray-400 text-sm mt-2';
+
+    const ok = await callAdminAction('submitParsedTrade', { legs, serverId: currentServerId });
+
+    if (ok) {
+        statusEl.textContent = 'Trade recorded. It will feed the future pricing solver.';
+        statusEl.className   = 'text-green-400 text-sm mt-2';
+        setTimeout(closeChatParserModal, 1800);
+    } else {
+        statusEl.textContent = 'Failed to submit. See console for details.';
+        statusEl.className   = 'text-red-400 text-sm mt-2';
+    }
+}
+
+window.openChatParserModal      = openChatParserModal;
+window.closeChatParserModal     = closeChatParserModal;
+window.setParsedLineResolution  = setParsedLineResolution;
+window.submitChatParsedTrade    = submitChatParsedTrade;
 async function loadAdminPanel() {
     const contentEl = document.getElementById('adminPanelContent');
     contentEl.innerHTML = 'Loading...';
@@ -1309,6 +1499,7 @@ function attachStaticListeners() {
     document.getElementById('clearTheirRows').addEventListener('click', () => clearRows('their'));
     document.getElementById('newAliasText').addEventListener('input', updateAddAliasButtonState);
 document.getElementById('aliasItemSearch').addEventListener('input', handleAliasItemSearchInput);
+    document.getElementById('chatParserText').addEventListener('input', handleChatParserTextInput);
 
     document.getElementById('openCopyTrade').addEventListener('click', openCopyTradeModal);
 
