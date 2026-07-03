@@ -486,15 +486,19 @@ function parseTradeChatText(text) {
             return;
         }
 
-        let qty = 1, itemText = line;
-        const leadQty  = line.match(/^(\d+)\s*x\s*(.+)$/i);
-        const trailQty = line.match(/^(.+?)\s*x\s*(\d+)$/i);
-        if (leadQty) {
-            qty = Number(leadQty[1]);
-            itemText = leadQty[2].trim();
-        } else if (trailQty) {
-            qty = Number(trailQty[2]);
-            itemText = trailQty[1].trim();
+      let qty = 1, itemText = line;
+        const leadQtyX     = line.match(/^(\d+)\s*x\s*(.+)$/i);
+        const trailQtyX    = line.match(/^(.+?)\s*x\s*(\d+)$/i);
+        const leadQtyPlain = line.match(/^(\d+)\s+(.+)$/);
+        if (leadQtyX) {
+            qty = Number(leadQtyX[1]);
+            itemText = leadQtyX[2].trim();
+        } else if (trailQtyX) {
+            qty = Number(trailQtyX[2]);
+            itemText = trailQtyX[1].trim();
+        } else if (leadQtyPlain) {
+            qty = Number(leadQtyPlain[1]);
+            itemText = leadQtyPlain[2].trim();
         }
 
         results.push({
