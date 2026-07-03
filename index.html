@@ -89,11 +89,12 @@
 <!-- Admin Modal -->
 <div id="adminModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
     <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
-       <div class="flex justify-between items-center mb-6">
+<div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-bold gold-text">Admin — Pending Price Suggestions</h2>
     <div class="flex gap-3 items-center">
         <button onclick="openGuideImportModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">📄 Import Guide</button>
         <button onclick="openAliasModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">🏷️ Aliases</button>
+        <button onclick="openChatParserModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">💬 Parse Chat</button>
         <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
     </div>
 </div>
@@ -313,7 +314,35 @@
     </div>
 </div>
      </div>
+<!-- Chat Parser Modal (admin-only) -->
+<div id="chatParserModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+        <h2 class="text-2xl font-bold gold-text mb-2">Parse Trade Chat</h2>
+        <p class="text-gray-400 text-sm mb-2">Reformat a real trade into this template, then paste it below. Each side starts with a label line ending in a colon, followed by its items — one per line.</p>
+        <pre class="text-xs bg-gray-900 border border-gray-700 rounded-md p-2 mb-4 text-gray-400 whitespace-pre-wrap">Frostbeard:
+2x Bronze Sword
+1x Iron Shield
 
+IcyWolf:
+1x Dragon Ring
+500 LS</pre>
+
+        <textarea id="chatParserText" rows="8" placeholder="Paste your reformatted trade here..."
+            class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar mb-3"></textarea>
+
+        <div id="chatParserPreview" class="space-y-2 mb-4"></div>
+
+        <p id="chatParserStatus" class="text-sm mb-2"></p>
+
+        <div class="flex gap-4">
+            <button id="chatParserSubmit" onclick="submitChatParsedTrade()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                Need at least 2 sides with resolved items
+            </button>
+            <button onclick="closeChatParserModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+        </div>
+    </div>
+</div>
+    
 <script type="module" src="script.js"></script>
 </body>
 </html>
