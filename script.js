@@ -549,14 +549,17 @@ function parseTradeChatText(text) {
 
     return results;
 }
+const { qty, itemText } = parseQuantityAndItem(line);
+        pushLeg(currentSide, line, qty, itemText);
+    });
+
+    return results;
+}
 
 window.openChatParserModal      = openChatParserModal;
 window.closeChatParserModal     = closeChatParserModal;
 window.setParsedLineResolution  = setParsedLineResolution;
 window.submitChatParsedTrade    = submitChatParsedTrade;
-// =============================================================
-// PRICING SOLVER (admin-only, via runPricingSolver edge action)
-// =============================================================
 
 // =============================================================
 // PRICING SOLVER (admin-only, via runPricingSolver edge action)
