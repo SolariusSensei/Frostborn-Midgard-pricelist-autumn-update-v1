@@ -1645,6 +1645,49 @@ window.rejectSuggestions    = rejectSuggestions;
 window.addNewItem           = addNewItem;
 window.closeCopyTradeModal  = closeCopyTradeModal;
 window.copyTradeToClipboard = copyTradeToClipboard;
+window.openFeedbackModal  = openFeedbackModal;
+window.closeFeedbackModal = closeFeedbackModal;
+window.submitFeedback     = submitFeedback;
+// =============================================================
+// FEEDBACK MODAL
+// =============================================================
+
+function openFeedbackModal() {
+    document.getElementById('feedbackModal').classList.remove('hidden');
+    document.getElementById('feedbackStatus').textContent = '';
+    document.getElementById('feedbackText').value = '';
+    document.getElementById('feedbackName').value = '';
+}
+
+function closeFeedbackModal() {
+    document.getElementById('feedbackModal').classList.add('hidden');
+}
+
+async function submitFeedback() {
+    const message  = document.getElementById('feedbackText').value.trim();
+    const name     = document.getElementById('feedbackName').value.trim();
+    const statusEl = document.getElementById('feedbackStatus');
+
+    if (!message) {
+        statusEl.textContent = 'Please write something before submitting.';
+        statusEl.className   = 'text-red-400 text-sm mb-3';
+        return;
+    }
+
+    const ok = await supabaseInsert('feedback', {
+        message,
+        name: name || null
+    });
+
+    if (ok) {
+        statusEl.textContent = 'Thanks! Your feedback has been received.';
+        statusEl.className   = 'text-green-400 text-sm mb-3';
+        setTimeout(closeFeedbackModal, 1500);
+    } else {
+        statusEl.textContent = 'Something went wrong. Please try again.';
+        statusEl.className   = 'text-red-400 text-sm mb-3';
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     showLoading(true);
