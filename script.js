@@ -503,8 +503,6 @@ function parseTradeChatText(text) {
         const line = rawLine.trim();
         if (!line) return;
 
-        // New trade boundary — this is what lets multiple real trades
-        // get pasted and submitted together in one go.
         if (/^successful trade with/i.test(line)) {
             if (seenAnyBoundary) tradeIndex += 1;
             seenAnyBoundary = true;
@@ -512,23 +510,26 @@ function parseTradeChatText(text) {
             return;
         }
 
-        // "Trade #124" footer — just a marker, not data
         if (/^trade\s*#?\d+/i.test(line)) return;
 
-        // Format B: "Label:- item + item + item"
-        const inlineMatch = line.match(/^(\S+):-\s*(.+)$/);
+        // Format B: "Label:- item + item", "Label: item and item",
+        // or "Label:item with item" — label plus items on one line,
+        // separated by +, and, with, or commas.
+        const inlineMatch = line.match(/^(\S+):-?\s*(.+)$/);
         if (inlineMatch) {
             const side = inlineMatch[1].trim();
-            inlineMatch[2].split('+').forEach(part => {
-                const trimmedPart = part.trim();
-                if (!trimmedPart) return;
-                const { qty, itemText } = parseQuantityAndItem(trimmedPart);
-                pushLeg(side, trimmedPart, qty, itemText);
-            });
+            inlineMatch[2]
+                .split(/\s*(?:\+|,|\band\b|\bwith\b)\s*/i)
+                .forEach(part => {
+                    const trimmedPart = part.trim();
+                    if (!trimmedPart) return;
+                    const { qty, itemText } = parseQuantityAndItem(trimmedPart);
+                    pushLeg(side, trimmedPart, qty, itemText);
+                });
             return;
         }
 
-        // Format A: "Label:" header, followed by one item per line
+        // Format A: "Label:" header alone, followed by one item per line
         const looksLikeItemOrPrice =
             /^\d+\s*x\s*.+/i.test(line) ||
             /^.+\s*x\s*\d+$/i.test(line) ||
@@ -540,124 +541,13 @@ function parseTradeChatText(text) {
             return;
         }
 
-        if (!currentSide) return; // stray line, no side context — safely ignored
+        if (!currentSide) return;
 
         const { qty, itemText } = parseQuantityAndItem(line);
         pushLeg(currentSide, line, qty, itemText);
     });
 
     return results;
-}
-
-function renderChatParserLine(line) {
-    if (line.isLS) {
-        return `
-        <div class="flex justify-between items-center bg-gray-900 px-3 py-2 rounded-md border border-gray-700">
-            <div class="text-xs"><span class="text-gray-500">${line.side}:</span> <span class="text-amber-300 font-semibold">${line.priceLS} LS (currency)</span></div>
-            <span class="text-[10px] text-gray-600">recorded as-is</span>
-        </div>`;
-    }
-
-    const resolved = line.resolvedName;
-    return `
-    <div class="flex justify-between items-center gap-2 bg-gray-900 px-3 py-2 rounded-md border ${resolved ? 'border-gray-700' : 'border-red-800'}">
-        <div class="text-xs flex-1 min-w-0">
-            <span class="text-gray-500">${line.side}:</span>
-            <span class="text-gray-300">${line.quantity}x "${line.rawText}"</span>
-            ${resolved ? `<span class="text-green-400"> &rarr; ${resolved}</span>` : `<span class="text-red-400"> &rarr; unresolved</span>`}
-        </div>
-        <select onchange="setParsedLineResolution(${line.id}, this.value)" class="bg-gray-700 border border-gray-600 rounded-md text-xs p-1 shrink-0">
-            <option value="">${resolved ? 'change...' : '-- pick item --'}</option>
-            ${Object.keys(ITEM_DATABASE).sort().map(n => `<option value="${n}" ${n === resolved ? 'selected' : ''}>${n}</option>`).join('')}
-        </select>
-    </div>`;
-}
-
-function renderChatParserPreview() {
-    const preview = document.getElementById('chatParserPreview');
-    if (!parsedTradeLines.length) {
-        preview.innerHTML = '<p class="text-gray-500 text-sm">Nothing parsed yet — paste chat above.</p>';
-        updateChatParserSubmitState();
-        return;
-    }
-
-    const groups = {};
-    parsedTradeLines.forEach(l => {
-        if (!groups[l.tradeIndex]) groups[l.tradeIndex] = [];
-        groups[l.tradeIndex].push(l);
-    });
-
-    preview.innerHTML = Object.keys(groups).sort((a, b) => Number(a) - Number(b)).map(key => {
-        const rowsHtml = groups[key].map(renderChatParserLine).join('');
-        return `
-        <div class="border border-gray-700 rounded-lg p-2">
-            <p class="text-xs font-semibold text-amber-400 mb-2">Trade ${Number(key) + 1}</p>
-            <div class="space-y-2">${rowsHtml}</div>
-        </div>`;
-    }).join('');
-
-    updateChatParserSubmitState();
-}
-
-function setParsedLineResolution(id, value) {
-    const line = parsedTradeLines.find(l => l.id === id);
-    if (!line) return;
-    line.resolvedName = value || null;
-    renderChatParserPreview();
-}
-
-function updateChatParserSubmitState() {
-    const groups = {};
-    parsedTradeLines.forEach(l => {
-        if (!groups[l.tradeIndex]) groups[l.tradeIndex] = [];
-        groups[l.tradeIndex].push(l);
-    });
-
-    const groupKeys = Object.keys(groups);
-    let totalResolvedLines = 0;
-    let allGroupsReady = groupKeys.length > 0;
-
-    groupKeys.forEach(key => {
-        const resolved = groups[key].filter(l => l.isLS || l.resolvedName);
-        const sides = new Set(resolved.map(l => l.side));
-        totalResolvedLines += resolved.length;
-        if (resolved.length === 0 || sides.size < 2) allGroupsReady = false;
-    });
-
-    const btn = document.getElementById('chatParserSubmit');
-    btn.disabled = !allGroupsReady;
-    btn.textContent = allGroupsReady
-        ? `Submit ${groupKeys.length} Trade${groupKeys.length === 1 ? '' : 's'} (${totalResolvedLines} lines)`
-        : `Need every detected trade (${groupKeys.length}) to have 2 resolved sides`;
-}
-
-async function submitChatParsedTrade() {
-    const statusEl = document.getElementById('chatParserStatus');
-    const legs = parsedTradeLines
-        .filter(l => l.isLS || l.resolvedName)
-        .map(l => ({
-            tradeIndex: l.tradeIndex,
-            side: l.side,
-            item_name: l.isLS ? 'LS' : l.resolvedName,
-            quantity: l.quantity,
-            price_ls: l.isLS ? l.priceLS : null
-        }));
-
-    if (!legs.length) return;
-
-    statusEl.textContent = 'Submitting...';
-    statusEl.className   = 'text-gray-400 text-sm mt-2';
-
-    const data = await callAdminAction('submitParsedTrade', { legs, serverId: currentServerId });
-
-    if (data) {
-        statusEl.textContent = 'Trade(s) recorded. They will feed the pricing solver.';
-        statusEl.className   = 'text-green-400 text-sm mt-2';
-        setTimeout(closeChatParserModal, 1800);
-    } else {
-        statusEl.textContent = 'Failed to submit. See console for details.';
-        statusEl.className   = 'text-red-400 text-sm mt-2';
-    }
 }
 
 window.openChatParserModal      = openChatParserModal;
