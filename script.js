@@ -549,11 +549,117 @@ function parseTradeChatText(text) {
 
     return results;
 }
-const { qty, itemText } = parseQuantityAndItem(line);
-        pushLeg(currentSide, line, qty, itemText);
+
+// ---------------------------------------------------------------
+// Chat-parser preview UI + submission.
+// (These were referenced via window.* below but not yet defined —
+// added here so opening/using the chat parser modal doesn't throw.)
+// ---------------------------------------------------------------
+
+function updateChatParserSubmitState() {
+    const btn = document.getElementById('chatParserSubmit');
+    if (!btn) return;
+    const hasResolvableLine = parsedTradeLines.some(l => l.isLS || l.resolvedName);
+    btn.disabled = !hasResolvableLine;
+}
+
+function setParsedLineResolution(lineId, itemName) {
+    const line = parsedTradeLines.find(l => l.id === lineId);
+    if (!line) return;
+    line.resolvedName = itemName || null;
+    renderChatParserPreview();
+}
+
+function renderChatParserPreview() {
+    const preview = document.getElementById('chatParserPreview');
+    if (!preview) return;
+
+    if (!parsedTradeLines.length) {
+        preview.innerHTML = '<p class="text-gray-500 text-sm">Paste chat text above to see parsed trades.</p>';
+        updateChatParserSubmitState();
+        return;
+    }
+
+    const byTrade = {};
+    parsedTradeLines.forEach(line => {
+        if (!byTrade[line.tradeIndex]) byTrade[line.tradeIndex] = [];
+        byTrade[line.tradeIndex].push(line);
     });
 
-    return results;
+    preview.innerHTML = Object.entries(byTrade).map(([tradeIndex, lines]) => {
+        const rowsHtml = lines.map(line => {
+            const label = line.isLS
+                ? `${formatLS(line.priceLS)}`
+                : `${line.quantity}x ${line.rawText}`;
+
+            const resolutionHtml = line.isLS
+                ? '<span class="text-gray-500 text-xs">(LS amount)</span>'
+                : line.resolvedName
+                    ? `<span class="text-green-400 text-xs">&rarr; ${line.resolvedName}</span>`
+                    : `<span class="text-red-400 text-xs">unresolved — needs manual match</span>`;
+
+            return `
+            <div class="flex justify-between items-center py-1 border-b border-gray-800 text-sm">
+                <div>
+                    <span class="text-gray-300">[${line.side}]</span>
+                    <span class="text-gray-200 ml-1">${label}</span>
+                </div>
+                <div>${resolutionHtml}</div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="p-2 mb-2 bg-gray-900 rounded-md border border-gray-700">
+            <p class="text-xs text-gray-500 mb-1">Trade ${Number(tradeIndex) + 1}</p>
+            ${rowsHtml}
+        </div>`;
+    }).join('');
+
+    updateChatParserSubmitState();
+}
+
+async function submitChatParsedTrade() {
+    const statusEl = document.getElementById('chatParserStatus');
+
+    const observationRows = parsedTradeLines
+        .filter(l => l.isLS || l.resolvedName)
+        .map(l => ({
+            trade_id: `chatparse-${Date.now()}-${l.tradeIndex}`,
+            server_id: currentServerId,
+            side: l.side,
+            item_name: l.isLS ? 'LS' : l.resolvedName,
+            quantity: l.isLS ? 1 : l.quantity,
+            total_price_ls: l.isLS ? l.priceLS : null
+        }));
+
+    if (!observationRows.length) {
+        if (statusEl) {
+            statusEl.textContent = 'Nothing resolvable to submit.';
+            statusEl.className   = 'text-red-400 text-sm mt-2';
+        }
+        return;
+    }
+
+    if (statusEl) {
+        statusEl.textContent = 'Submitting...';
+        statusEl.className   = 'text-gray-400 text-sm mt-2';
+    }
+
+    const ok = await callAdminAction('submitParsedTrade', {
+        serverId: currentServerId,
+        rows: observationRows
+    });
+
+    if (statusEl) {
+        if (ok) {
+            statusEl.textContent = `Submitted ${observationRows.length} observation row(s).`;
+            statusEl.className   = 'text-green-400 text-sm mt-2';
+            setTimeout(closeChatParserModal, 1200);
+        } else {
+            statusEl.textContent = 'Submission failed. See console for details.';
+            statusEl.className   = 'text-red-400 text-sm mt-2';
+        }
+    }
 }
 
 window.openChatParserModal      = openChatParserModal;
