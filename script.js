@@ -558,6 +558,10 @@ window.submitChatParsedTrade    = submitChatParsedTrade;
 // PRICING SOLVER (admin-only, via runPricingSolver edge action)
 // =============================================================
 
+// =============================================================
+// PRICING SOLVER (admin-only, via runPricingSolver edge action)
+// =============================================================
+
 async function runPricingSolver() {
     const statusEl = document.getElementById('solverStatus');
     const btn = document.getElementById('runSolverBtn');
@@ -571,10 +575,10 @@ async function runPricingSolver() {
     btn.disabled = false;
 
     if (data && data.result) {
-        const { itemsUpdated, tradesUsed, unsolvedTrades } = data.result;
+        const { itemsUpdated, itemsConsidered, tradesUsed } = data.result;
         statusEl.textContent =
-            `Done: ${itemsUpdated} item suggestion(s) from ${tradesUsed} usable trade(s). ` +
-            `${unsolvedTrades} trade(s) skipped (too many unknowns in one trade).`;
+            `Done: ${itemsUpdated} price suggestion(s) generated, considering ${itemsConsidered} ` +
+            `item(s) across ${tradesUsed} two-sided trade(s).`;
         statusEl.className = 'text-green-400 text-sm mt-2';
         await loadAdminPanel();
     } else {
