@@ -37,115 +37,110 @@
         <p class="text-gray-400 text-sm mt-1">List anything on either side of the trade. Every item shows its book value and lets you set the price you're actually negotiating.</p>
     </div>
 
-   <!-- Price Suggestion Modal -->
-<div id="suggestionModal" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center hidden">
-    <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 w-full max-w-md shadow-2xl">
-        <h2 class="text-2xl font-bold gold-text mb-6">Suggest a Price Change</h2>
-        <form id="suggestionForm" onsubmit="return false;">
-            <div class="mb-4 relative">
-                <label class="block text-sm font-medium text-gray-400 mb-1">Item Name</label>
-                <input type="text" id="suggestItemName" placeholder="Type to search or enter new item..." autocomplete="off"
-                    class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-                <div id="suggestItemResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
-                <p id="newItemNotice" class="text-xs text-amber-400 mt-1 hidden">This will be submitted as a brand new item.</p>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-400 mb-1">Suggested Price (LS)</label>
-                <input type="number" id="suggestPrice" step="0.01" min="0.01" placeholder="e.g. 250" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-400 mb-1">Reason (optional)</label>
-                <textarea id="suggestReason" rows="3" placeholder="Why this price? Mention category if it's a new item." class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
-            </div>
-            <p id="suggestionStatus" class="text-sm mt-2"></p>
-            <div class="flex gap-4 mt-6">
-                <button onclick="submitSuggestion()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition">Submit</button>
-                <button onclick="closeSuggestionModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
-            </div>
-        </form>
+    <!-- Price Suggestion Modal -->
+    <div id="suggestionModal" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 w-full max-w-md shadow-2xl">
+            <h2 class="text-2xl font-bold gold-text mb-6">Suggest a Price Change</h2>
+            <form id="suggestionForm" onsubmit="return false;">
+                <div class="mb-4 relative">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Item Name</label>
+                    <input type="text" id="suggestItemName" placeholder="Type to search or enter new item..." autocomplete="off"
+                        class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div id="suggestItemResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute w-full z-10"></div>
+                    <p id="newItemNotice" class="text-xs text-amber-400 mt-1 hidden">This will be submitted as a brand new item.</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Suggested Price (LS)</label>
+                    <input type="number" id="suggestPrice" step="0.01" min="0.01" placeholder="e.g. 250" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Reason (optional)</label>
+                    <textarea id="suggestReason" rows="3" placeholder="Why this price? Mention category if it's a new item." class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+                <p id="suggestionStatus" class="text-sm mt-2"></p>
+                <div class="flex gap-4 mt-6">
+                    <button onclick="submitSuggestion()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition">Submit</button>
+                    <button onclick="closeSuggestionModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
     <!-- Admin Login Modal -->
-<div id="adminLoginModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
-    <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-sm shadow-2xl">
-        <h2 class="text-2xl font-bold gold-text mb-6">Admin Login</h2>
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-400 mb-1">Email</label>
-            <input type="email" id="adminEmail" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-        </div>
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-400 mb-1">Password</label>
-            <input type="password" id="adminPasswordInput" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-        </div>
-        <p id="adminLoginStatus" class="text-sm mb-3"></p>
-        <div class="flex gap-4">
-            <button onclick="adminLogin()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition">Login</button>
-            <button onclick="closeAdminLoginModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
-        </div>
-    </div>
-     </div>
-
-<!-- Admin Modal -->
-<div id="adminModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
-    <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
-<div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold gold-text">Admin — Pending Price Suggestions</h2>
-    <div class="flex gap-3 items-center">
-        <button onclick="openGuideImportModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">📄 Import Guide</button>
-        <button onclick="openAliasModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">🏷️ Aliases</button>
-        <button onclick="openChatParserModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">💬 Parse Chat</button>
-        <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
-    </div>
-</div>
-        <div class="mb-4">
-            <button id="runSolverBtn" onclick="runPricingSolver()" class="w-full py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition text-sm">
-                🧮 Run Pricing Solver
-            </button>
-            <p id="solverStatus" class="text-sm mt-2"></p>
-        </div>
-        <div id="adminPanelContent" class="space-y-4 text-sm text-gray-300">Loading...</div>
-        <button onclick="closeAdminModal()" class="w-full mt-8 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg transition">Close</button>
-    </div>
-</div>
-<!-- Guide Import Modal (admin-only) -->
-<div id="guideImportModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
-        <h2 class="text-2xl font-bold gold-text mb-2">Import Guide / Spreadsheet</h2>
-        <p class="text-gray-400 text-sm mb-4">Copy cells from a spreadsheet or guide (Google Sheets, Excel, etc.) and paste below. Tab- or comma-separated both work.</p>
-
-        <textarea id="guideImportText" rows="6" placeholder="Item Name&#9;Price&#10;Bronze Sword&#9;120&#10;Iron Shield&#9;340"
-            class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar mb-3"></textarea>
-
-        <label class="flex items-center gap-2 text-sm text-gray-400 mb-3">
-            <input type="checkbox" id="guideHasHeader" checked class="rounded">
-            First row is a header (not data)
-        </label>
-
-        <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
-                <label class="block text-xs font-medium mb-1 text-gray-400">Item Name Column</label>
-                <select id="guideNameCol" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm"></select>
+    <div id="adminLoginModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-sm shadow-2xl">
+            <h2 class="text-2xl font-bold gold-text mb-6">Admin Login</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                <input type="email" id="adminEmail" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
             </div>
-            <div>
-                <label class="block text-xs font-medium mb-1 text-gray-400">Price Column</label>
-                <select id="guidePriceCol" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm"></select>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                <input type="password" id="adminPasswordInput" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <p id="adminLoginStatus" class="text-sm mb-3"></p>
+            <div class="flex gap-4">
+                <button onclick="adminLogin()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition">Login</button>
+                <button onclick="closeAdminLoginModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
             </div>
         </div>
+    </div>
 
-        <div id="guideImportPreview" class="mb-4"></div>
-
-        <p id="guideImportStatus" class="text-sm mb-2"></p>
-
-        <div class="flex gap-4">
-            <button id="guideImportSubmit" onclick="submitGuideImport()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                Import 0 Suggestions
-            </button>
-            <button onclick="closeGuideImportModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+    <!-- Admin Modal -->
+    <div id="adminModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-8 w-full max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold gold-text">Admin — Pending Price Suggestions</h2>
+                <div class="flex gap-3 items-center">
+                    <button onclick="openGuideImportModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">📄 Import Guide</button>
+                    <button onclick="openAliasModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">🏷️ Aliases</button>
+                    <button onclick="openChatParserModal()" class="text-xs px-3 py-1.5 bg-amber-700 hover:bg-amber-600 rounded-md text-white font-semibold">💬 Parse Chat</button>
+                    <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <button id="runSolverBtn" onclick="runPricingSolver()" class="w-full py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition text-sm">
+                    🧮 Run Pricing Solver
+                </button>
+                <p id="solverStatus" class="text-sm mt-2"></p>
+            </div>
+            <div id="adminPanelContent" class="space-y-4 text-sm text-gray-300">Loading...</div>
+            <button onclick="closeAdminModal()" class="w-full mt-8 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg transition">Close</button>
         </div>
     </div>
-</div>
-    
+
+    <!-- Guide Import Modal -->
+    <div id="guideImportModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <h2 class="text-2xl font-bold gold-text mb-2">Import Guide / Spreadsheet</h2>
+            <p class="text-gray-400 text-sm mb-4">Copy cells from a spreadsheet or guide (Google Sheets, Excel, etc.) and paste below. Tab- or comma-separated both work.</p>
+            <textarea id="guideImportText" rows="6" placeholder="Item Name&#9;Price&#10;Bronze Sword&#9;120&#10;Iron Shield&#9;340"
+                class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar mb-3"></textarea>
+            <label class="flex items-center gap-2 text-sm text-gray-400 mb-3">
+                <input type="checkbox" id="guideHasHeader" checked class="rounded">
+                First row is a header (not data)
+            </label>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1 text-gray-400">Item Name Column</label>
+                    <select id="guideNameCol" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1 text-gray-400">Price Column</label>
+                    <select id="guidePriceCol" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm"></select>
+                </div>
+            </div>
+            <div id="guideImportPreview" class="mb-4"></div>
+            <p id="guideImportStatus" class="text-sm mb-2"></p>
+            <div class="flex gap-4">
+                <button id="guideImportSubmit" onclick="submitGuideImport()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    Import 0 Suggestions
+                </button>
+                <button onclick="closeGuideImportModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Copy Trade Modal -->
     <div id="copyTradeModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl">
@@ -161,6 +156,83 @@
         </div>
     </div>
 
+    <!-- Alias Manager Modal -->
+    <div id="aliasModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <h2 class="text-2xl font-bold gold-text mb-2">Manage Item Aliases</h2>
+            <p class="text-gray-400 text-sm mb-4">Map slang/shorthand names to a real item.</p>
+            <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-700 mb-6">
+                <div class="mb-3">
+                    <label class="block text-xs font-medium mb-1 text-gray-400">Alias / Slang</label>
+                    <input type="text" id="newAliasText" placeholder="e.g. prot ring" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm">
+                </div>
+                <div class="mb-3 relative">
+                    <label class="block text-xs font-medium mb-1 text-gray-400">Maps To Item</label>
+                    <input type="text" id="aliasItemSearch" placeholder="Search for the real item..." autocomplete="off" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm">
+                    <div id="aliasItemSearchResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute left-0 right-0 z-10"></div>
+                    <p class="text-sm font-semibold mt-2">Selected: <span id="aliasItemSelected" class="text-amber-300">none</span></p>
+                </div>
+                <p id="aliasAddStatus" class="text-sm mb-2"></p>
+                <button id="addAliasBtn" onclick="submitNewAlias()" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    Add Alias
+                </button>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-400 mb-2">Existing Aliases</h3>
+            <div id="aliasListContainer" class="space-y-2 text-sm">Loading...</div>
+            <button onclick="closeAliasModal()" class="w-full mt-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Close</button>
+        </div>
+    </div>
+
+    <!-- Chat Parser Modal -->
+    <div id="chatParserModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <h2 class="text-2xl font-bold gold-text mb-2">Parse Trade Chat</h2>
+            <p class="text-gray-400 text-sm mb-2">Reformat a real trade into this template, then paste it below.</p>
+            <pre class="text-xs bg-gray-900 border border-gray-700 rounded-md p-2 mb-4 text-gray-400 whitespace-pre-wrap">Frostbeard:
+2x Bronze Sword
+1x Iron Shield
+
+IcyWolf:
+1x Dragon Ring
+500 LS</pre>
+            <textarea id="chatParserText" rows="8" placeholder="Paste your reformatted trade here..."
+                class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar mb-3"></textarea>
+            <div id="chatParserPreview" class="space-y-2 mb-4"></div>
+            <p id="chatParserStatus" class="text-sm mb-2"></p>
+            <div class="flex gap-4">
+                <button id="chatParserSubmit" onclick="submitChatParsedTrade()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    Need at least 2 sides with resolved items
+                </button>
+                <button onclick="closeChatParserModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 w-full max-w-md shadow-2xl">
+            <h2 class="text-2xl font-bold gold-text mb-2">Share Feedback</h2>
+            <p class="text-gray-400 text-sm mb-6">Bug report, feature idea, or general thought — anything helps.</p>
+            <form id="feedbackForm" onsubmit="return false;">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Your feedback</label>
+                    <textarea id="feedbackText" rows="5" placeholder="Tell me what you think, what's broken, or what you'd like to see..."
+                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Your name or IGN (optional)</label>
+                    <input type="text" id="feedbackName" placeholder="Anonymous is fine"
+                        class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <p id="feedbackStatus" class="text-sm mb-3"></p>
+                <div class="flex gap-4">
+                    <button onclick="submitFeedback()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition">Submit</button>
+                    <button onclick="closeFeedbackModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ===================== TRADE BUILDER ===================== -->
     <div id="tradeBuilder" class="lg:grid lg:grid-cols-2 lg:gap-8 mb-8">
 
@@ -171,12 +243,8 @@
             </div>
             <div id="yourRows" class="space-y-4"></div>
             <div class="flex gap-3 mt-6">
-                <button id="addYourRow" class="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">
-                    + Add Item
-                </button>
-                <button id="clearYourRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
-                    Clear All
-                </button>
+                <button id="addYourRow" class="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-500 transition shadow-lg">+ Add Item</button>
+                <button id="clearYourRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">Clear All</button>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-700 text-center">
                 <div>
@@ -197,12 +265,8 @@
             </div>
             <div id="theirRows" class="space-y-4"></div>
             <div class="flex gap-3 mt-6">
-                <button id="addTheirRow" class="flex-1 py-3 bg-amber-600 rounded-lg font-bold text-white hover:bg-amber-500 transition shadow-lg">
-                    + Add Item
-                </button>
-                <button id="clearTheirRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">
-                    Clear All
-                </button>
+                <button id="addTheirRow" class="flex-1 py-3 bg-amber-600 rounded-lg font-bold text-white hover:bg-amber-500 transition shadow-lg">+ Add Item</button>
+                <button id="clearTheirRows" class="py-3 px-5 bg-gray-700 rounded-lg font-bold text-white hover:bg-gray-600 transition">Clear All</button>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-700 text-center">
                 <div>
@@ -220,7 +284,6 @@
 
     <!-- Verdict Section -->
     <div id="verdict-section" class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 space-y-6">
-
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center text-center">
             <div class="p-4 bg-blue-900/50 rounded-lg border border-blue-700">
                 <h3 class="text-sm font-semibold text-gray-400 mb-1">Your Offer (Price)</h3>
@@ -237,7 +300,6 @@
                 <div class="text-xs text-gray-500 mt-1">Book: <span id="their-total-book">0.00 LS</span></div>
             </div>
         </div>
-
         <div>
             <h3 class="text-lg font-semibold mb-1 text-gray-400 text-center">Trade Balance (Price basis)</h3>
             <div class="balance-scale-container">
@@ -246,7 +308,6 @@
             </div>
             <p id="balanceStatusText" class="text-center text-sm font-medium mt-1">Select items to begin trade.</p>
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div id="verdictBox" class="p-4 rounded-lg shadow-xl">
                 <h3 class="text-xl font-bold mb-3 text-center">Final Verdict</h3>
@@ -257,12 +318,10 @@
                 <p id="bookValueCheck" class="text-sm text-gray-300">Add items to compare against book value.</p>
             </div>
         </div>
-
         <button id="openCopyTrade" class="w-full py-3 bg-green-700 hover:bg-green-600 text-white font-bold rounded-lg transition shadow-lg">
             📋 Copy Trade
         </button>
     </div>
-    <!-- ===================== END TRADE BUILDER ===================== -->
 
     <!-- About Section -->
     <div id="about-section" class="fixed inset-0 bg-gray-900/95 z-50 p-8 overflow-y-auto hidden">
@@ -279,85 +338,26 @@
     </div>
 
     <!-- Bottom-right action buttons -->
-<div class="fixed bottom-4 right-4 z-20 flex flex-col sm:flex-row gap-2 sm:gap-3 items-end">
-    <a href="market.html" class="bg-gray-800 border border-amber-700 text-amber-400 px-4 py-3 rounded-full shadow-lg hover:bg-gray-700 transition font-bold whitespace-nowrap">
-        📈 Market
-    </a>
-    <button onclick="document.getElementById('about-section').classList.remove('hidden')" class="bg-amber-500 text-gray-900 p-3 rounded-full shadow-lg hover:bg-amber-400 transition font-bold whitespace-nowrap">
-        About / Data
-    </button>
-</div>
-
-    <!-- Hidden Admin Trigger: click bottom-left corner 3 times -->
-    <div id="adminTrigger" class="fixed bottom-4 left-4 w-8 h-8 z-20 cursor-pointer opacity-0"></div>
+    <div class="fixed bottom-4 right-4 z-20 flex flex-col sm:flex-row gap-2 sm:gap-3 items-end">
+        <a href="market.html" class="bg-gray-800 border border-amber-700 text-amber-400 px-4 py-3 rounded-full shadow-lg hover:bg-gray-700 transition font-bold whitespace-nowrap">
+            📈 Market
+        </a>
+        <button onclick="document.getElementById('about-section').classList.remove('hidden')" class="bg-amber-500 text-gray-900 p-3 rounded-full shadow-lg hover:bg-amber-400 transition font-bold whitespace-nowrap">
+            About / Data
+        </button>
+    </div>
 
     <!-- Feedback Button -->
-    <button onclick="openFeedbackModal()" 
+    <button onclick="openFeedbackModal()"
         class="fixed bottom-4 left-16 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-300 hover:text-white px-4 py-3 rounded-full shadow-lg transition font-bold z-20 text-sm">
         💬 Feedback
     </button>
 
-    <!-- Feedback Modal -->
-    <div id="feedbackModal" class="fixed inset-0 bg-gray-900/90 z-50 flex items-center justify-center hidden">
-<!-- Alias Manager Modal (admin-only) -->
-<div id="aliasModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
-        <h2 class="text-2xl font-bold gold-text mb-2">Manage Item Aliases</h2>
-        <p class="text-gray-400 text-sm mb-4">Map slang/shorthand names to a real item. The future chat parser will use these to resolve things like "prot ring" &rarr; "Ring of Protection".</p>
+    <!-- Hidden Admin Trigger: click bottom-left corner 3 times -->
+    <div id="adminTrigger" class="fixed bottom-4 left-4 w-8 h-8 z-20 cursor-pointer opacity-0"></div>
 
-        <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-700 mb-6">
-            <div class="mb-3">
-                <label class="block text-xs font-medium mb-1 text-gray-400">Alias / Slang</label>
-                <input type="text" id="newAliasText" placeholder="e.g. prot ring" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm">
-            </div>
-            <div class="mb-3 relative">
-                <label class="block text-xs font-medium mb-1 text-gray-400">Maps To Item</label>
-                <input type="text" id="aliasItemSearch" placeholder="Search for the real item..." autocomplete="off" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm">
-                <div id="aliasItemSearchResults" class="max-h-40 overflow-y-auto custom-scrollbar bg-gray-700 rounded-md mt-1 hidden absolute left-0 right-0 z-10"></div>
-                <p class="text-sm font-semibold mt-2">Selected: <span id="aliasItemSelected" class="text-amber-300">none</span></p>
-            </div>
-            <p id="aliasAddStatus" class="text-sm mb-2"></p>
-            <button id="addAliasBtn" onclick="submitNewAlias()" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                Add Alias
-            </button>
-        </div>
-
-        <h3 class="text-lg font-semibold text-gray-400 mb-2">Existing Aliases</h3>
-        <div id="aliasListContainer" class="space-y-2 text-sm">Loading...</div>
-
-        <button onclick="closeAliasModal()" class="w-full mt-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Close</button>
-    </div>
 </div>
-     </div>
-<!-- Chat Parser Modal (admin-only) -->
-<div id="chatParserModal" class="fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-gray-800 border border-amber-700 rounded-xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
-        <h2 class="text-2xl font-bold gold-text mb-2">Parse Trade Chat</h2>
-        <p class="text-gray-400 text-sm mb-2">Reformat a real trade into this template, then paste it below. Each side starts with a label line ending in a colon, followed by its items — one per line.</p>
-        <pre class="text-xs bg-gray-900 border border-gray-700 rounded-md p-2 mb-4 text-gray-400 whitespace-pre-wrap">Frostbeard:
-2x Bronze Sword
-1x Iron Shield
 
-IcyWolf:
-1x Dragon Ring
-500 LS</pre>
-
-        <textarea id="chatParserText" rows="8" placeholder="Paste your reformatted trade here..."
-            class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-200 font-mono custom-scrollbar mb-3"></textarea>
-
-        <div id="chatParserPreview" class="space-y-2 mb-4"></div>
-
-        <p id="chatParserStatus" class="text-sm mb-2"></p>
-
-        <div class="flex gap-4">
-            <button id="chatParserSubmit" onclick="submitChatParsedTrade()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                Need at least 2 sides with resolved items
-            </button>
-            <button onclick="closeChatParserModal()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancel</button>
-        </div>
-    </div>
-</div>
-    
 <script type="module" src="script.js?v=9"></script>
 </body>
 </html>
