@@ -1409,9 +1409,12 @@ function buildSideLines(side) {
     const list = rows[side].filter(r => r.name);
     if (!list.length) return ['  (nothing listed)'];
     return list.map(row => {
-        const Market  = calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
-        const price = row.priceTouched ? row.customPrice : Market;
-        return `  - ${row.quantity}x ${row.name}${gearSuffix(row)} — Market: ${formatLS(Market)} | Price: ${formatLS(price)}`;
+        const market = calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
+        const price  = row.priceTouched ? row.customPrice : market;
+        const priceNote = row.priceTouched && Math.abs(price - market) > 0.01
+            ? ` (market: ${formatLS(market)})`
+            : '';
+        return `  • ${row.quantity}x ${row.name}${gearSuffix(row)} — ${formatLS(price)}${priceNote}`;
     });
 }
 
@@ -1422,27 +1425,27 @@ function buildTradeSummaryText() {
         : 'Unknown Server';
 
     const diff = totals.yourCustom - totals.theirCustom;
-    let diffLine;
+    let verdict;
     if (Math.abs(diff) < 0.01) {
-        diffLine = 'Balanced.';
+        verdict = '✅ Balanced';
     } else if (diff > 0) {
-        diffLine = `Your offer is worth ${formatLS(diff)} more than theirs.`;
+        verdict = `⚖️ You're giving ${formatLS(diff)} more`;
     } else {
-        diffLine = `Their offer is worth ${formatLS(Math.abs(diff))} more than yours.`;
+        verdict = `⚖️ You're getting ${formatLS(Math.abs(diff))} more`;
     }
 
     const lines = [];
-    lines.push(`=== Midgard Trade Agreement (${serverName}) ===`);
+    lines.push(`🤝 Trade Check — ${serverName}`);
     lines.push('');
-    lines.push('YOUR OFFER:');
+    lines.push('YOU GIVE:');
     lines.push(...buildSideLines('your'));
-    lines.push(`  Total — Market: ${formatLS(totals.yourMarket)} | Price: ${formatLS(totals.yourCustom)}`);
+    lines.push(`Total: ${formatLS(totals.yourCustom)}`);
     lines.push('');
-    lines.push('THEIR OFFER:');
+    lines.push('YOU GET:');
     lines.push(...buildSideLines('their'));
-    lines.push(`  Total — Market: ${formatLS(totals.theirMarket)} | Price: ${formatLS(totals.theirCustom)}`);
+    lines.push(`Total: ${formatLS(totals.theirCustom)}`);
     lines.push('');
-    lines.push(`Difference (Price basis): ${diffLine}`);
+    lines.push(verdict);
 
     return lines.join('\n');
 }
