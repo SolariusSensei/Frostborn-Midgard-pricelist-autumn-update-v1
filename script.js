@@ -33,8 +33,8 @@ let rowSeq  = { your: 0,  their: 0 };
 
 // last computed totals, kept around for the copy-trade text builder
 let totals = {
-    yourSuggested: 0, yourCustom: 0,
-    theirSuggested: 0, theirCustom: 0
+    yourMarket: 0, yourCustom: 0,
+    theirMarket: 0, theirCustom: 0
 };
 
 // =============================================================
@@ -726,7 +726,7 @@ const suggestions = await supabaseFetch('suggestions?select=*&status=eq.pending&
         const itemName = group.displayName;
         const exists   = !!getItemData(itemName);
         const safeId   = itemName.replace(/[^a-zA-Z0-9]/g, '');
-        const prices   = group.items.map(s => Number(s.suggested_price));
+        const prices   = group.items.map(s => Number(s.Market_price));
         const avg      = prices.reduce((a, b) => a + b, 0) / prices.length;
 
         const newItemFields = exists ? '' : `
@@ -752,13 +752,13 @@ const suggestions = await supabaseFetch('suggestions?select=*&status=eq.pending&
             return `
             <div class="flex justify-between items-start py-2 ${group.items.length > 1 ? 'border-t border-gray-800' : ''}">
                 <div>
-                    <p class="text-sm text-gray-200">${formatLS(s.suggested_price)}${exists ? '' : ' (new item)'}</p>
+                    <p class="text-sm text-gray-200">${formatLS(s.Market_price)}${exists ? '' : ' (new item)'}</p>
                     ${s.reason ? `<p class="text-xs text-gray-500 mt-1">"${s.reason.replace(/</g, '&lt;')}"</p>` : ''}
                     <p class="text-[10px] text-gray-600 mt-0.5">${new Date(s.created_at).toLocaleString()}</p>
                 </div>
                 <div class="flex gap-2 shrink-0">
                     <button class="px-3 py-1 bg-green-700 hover:bg-green-600 rounded-md text-xs"
-                        onclick="${exists ? `approvePrice('${safeRowName}', ${s.suggested_price})` : `addNewItem('${safeRowName}', ${s.suggested_price})`}">
+                        onclick="${exists ? `approvePrice('${safeRowName}', ${s.Market_price})` : `addNewItem('${safeRowName}', ${s.Market_price})`}">
                         ${exists ? 'Approve' : 'Add Item'}
                     </button>
                     <button class="px-3 py-1 bg-red-700 hover:bg-red-600 rounded-md text-xs"
@@ -934,9 +934,9 @@ function calculateItemLS(itemName, quantity, level, isBroken, armorPiece) {
 // TRADE BUILDER — generic row engine, shared by 'your' and 'their'
 // ---------------------------------------------------------------
 // Each side is an unlimited list of rows. Every row carries both
-// its computed Suggested value (from the price database + gear state)
+// its computed Market value (from the price database + gear state)
 // and an independently editable "price" — what's actually being
-// negotiated for that item. The price auto-follows Suggested value
+// negotiated for that item. The price auto-follows Market value
 // until the person edits it directly, at which point it's marked
 // "touched" and stops auto-syncing (until reset).
 //
@@ -976,8 +976,8 @@ function createRowHTML(side, row) {
                     class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
             </div>
             <div>
-                <label class="block text-xs font-medium mb-1 text-gray-400">Suggested Value</label>
-                <span id="${side}SuggestedLS-${id}" class="font-bold text-gray-300 text-sm block py-2 text-center">0.00 LS</span>
+                <label class="block text-xs font-medium mb-1 text-gray-400">Market Value</label>
+                <span id="${side}MarketLS-${id}" class="font-bold text-gray-300 text-sm block py-2 text-center">0.00 LS</span>
             </div>
             <div>
                 <label class="flex items-center justify-between text-xs font-medium mb-1 text-gray-400 gap-1">
@@ -1147,7 +1147,7 @@ function selectRowItem(side, id, itemName) {
     row.level        = 0;
     row.isBroken     = false;
     row.armorPiece   = item.isArmorSet ? 'Full Set' : 'N/A';
-    row.priceTouched = false; // fresh item: price follows Suggested value again
+    row.priceTouched = false; // fresh item: price follows Market value again
 
     document.getElementById(`${side}ItemNameDisplay-${id}`).textContent = itemName;
     document.getElementById(`${side}ItemNameDisplay-${id}`).classList.add(side === 'your' ? 'text-blue-300' : 'text-amber-300');
@@ -1213,18 +1213,18 @@ function resetRowPrice(side, id) {
     updateTotals();
 }
 
-// Recomputes a row's Suggested value display, and — if the price hasn't
-// been manually touched — keeps its price mirrored to Suggested value.
+// Recomputes a row's Market value display, and — if the price hasn't
+// been manually touched — keeps its price mirrored to Market value.
 function recalculateRow(side, row) {
-    const SuggestedValue = row.name
+    const MarketValue = row.name
         ? calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece)
         : 0;
 
-    const SuggestedDisplay = document.getElementById(`${side}SuggestedLS-${row.id}`);
-    if (SuggestedDisplay) SuggestedDisplay.textContent = formatLS(SuggestedValue);
+    const MarketDisplay = document.getElementById(`${side}MarketLS-${row.id}`);
+    if (MarketDisplay) MarketDisplay.textContent = formatLS(MarketValue);
 
     if (!row.priceTouched) {
-        row.customPrice = SuggestedValue;
+        row.customPrice = MarketValue;
     }
 
     const priceInput = document.getElementById(`${side}Price-${row.id}`);
@@ -1232,7 +1232,7 @@ function recalculateRow(side, row) {
         priceInput.value = row.customPrice.toFixed(2);
     }
 
-    return SuggestedValue;
+    return MarketValue;
 }
 
 // Adds a single row without disturbing any other row's DOM/state —
@@ -1305,30 +1305,30 @@ function resetTradeBuilder() {
 // =============================================================
 
 function sideTotals(side) {
-    let Suggested = 0, custom = 0;
+    let Market = 0, custom = 0;
     rows[side].forEach(row => {
         if (!row.name) return;
-        Suggested   += calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
+        Market   += calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
         custom += row.priceTouched ? row.customPrice : calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
     });
-    return { Suggested, custom };
+    return { Market, custom };
 }
 
 function updateTotals() {
     const your  = sideTotals('your');
     const their = sideTotals('their');
 
-    totals = { yourSuggested: your.Suggested, yourCustom: your.custom, theirSuggested: their.Suggested, theirCustom: their.custom };
+    totals = { yourMarket: your.Market, yourCustom: your.custom, theirMarket: their.Market, theirCustom: their.custom };
 
-    document.getElementById('yourSuggestedTotalLS').textContent   = formatLS(your.Suggested);
+    document.getElementById('yourMarketTotalLS').textContent   = formatLS(your.Market);
     document.getElementById('yourCustomTotalLS').textContent = formatLS(your.custom);
-    document.getElementById('theirSuggestedTotalLS').textContent  = formatLS(their.Suggested);
+    document.getElementById('theirMarketTotalLS').textContent  = formatLS(their.Market);
     document.getElementById('theirCustomTotalLS').textContent= formatLS(their.custom);
 
     document.getElementById('your-total-ls').textContent  = formatLS(your.custom);
-    document.getElementById('your-total-Suggested').textContent = formatLS(your.Suggested);
+    document.getElementById('your-total-Market').textContent = formatLS(your.Market);
     document.getElementById('their-total-ls').textContent = formatLS(their.custom);
-    document.getElementById('their-total-Suggested').textContent = formatLS(their.Suggested);
+    document.getElementById('their-total-Market').textContent = formatLS(their.Market);
 
     const tolerance = 0.01;
     const diff      = your.custom - their.custom;
@@ -1376,17 +1376,17 @@ function updateTotals() {
     document.getElementById('tradeVerdict').className       = `text-center text-lg font-semibold ${statusClass}`;
     document.getElementById('balanceStatusText').textContent = balanceText;
 
-    const SuggestedCheckEl = document.getElementById('SuggestedValueCheck');
+    const MarketCheckEl = document.getElementById('MarketValueCheck');
     if (!hasYourItems || !hasTheirItems) {
-        SuggestedCheckEl.textContent = 'Add items to compare against Suggested value.';
+        MarketCheckEl.textContent = 'Add items to compare against Market value.';
     } else {
-        const SuggestedDiff = your.Suggested - their.Suggested;
-        if (Math.abs(SuggestedDiff) < tolerance) {
-            SuggestedCheckEl.textContent = 'At Suggested value, this trade is exactly even.';
-        } else if (SuggestedDiff > 0) {
-            SuggestedCheckEl.textContent = `At Suggested value, your side is worth ${formatLS(SuggestedDiff)} more — you may be discounting your own items or getting a deal from them.`;
+        const MarketDiff = your.Market - their.Market;
+        if (Math.abs(MarketDiff) < tolerance) {
+            MarketCheckEl.textContent = 'At Market value, this trade is exactly even.';
+        } else if (MarketDiff > 0) {
+            MarketCheckEl.textContent = `At Market value, your side is worth ${formatLS(MarketDiff)} more — you may be discounting your own items or getting a deal from them.`;
         } else {
-            SuggestedCheckEl.textContent = `At Suggested value, their side is worth ${formatLS(Math.abs(SuggestedDiff))} more — you may be paying a premium or discounting their items.`;
+            MarketCheckEl.textContent = `At Market value, their side is worth ${formatLS(Math.abs(MarketDiff))} more — you may be paying a premium or discounting their items.`;
         }
     }
 }
@@ -1409,9 +1409,9 @@ function buildSideLines(side) {
     const list = rows[side].filter(r => r.name);
     if (!list.length) return ['  (nothing listed)'];
     return list.map(row => {
-        const Suggested  = calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
-        const price = row.priceTouched ? row.customPrice : Suggested;
-        return `  - ${row.quantity}x ${row.name}${gearSuffix(row)} — Suggested: ${formatLS(Suggested)} | Price: ${formatLS(price)}`;
+        const Market  = calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
+        const price = row.priceTouched ? row.customPrice : Market;
+        return `  - ${row.quantity}x ${row.name}${gearSuffix(row)} — Market: ${formatLS(Market)} | Price: ${formatLS(price)}`;
     });
 }
 
@@ -1436,11 +1436,11 @@ function buildTradeSummaryText() {
     lines.push('');
     lines.push('YOUR OFFER:');
     lines.push(...buildSideLines('your'));
-    lines.push(`  Total — Suggested: ${formatLS(totals.yourSuggested)} | Price: ${formatLS(totals.yourCustom)}`);
+    lines.push(`  Total — Market: ${formatLS(totals.yourMarket)} | Price: ${formatLS(totals.yourCustom)}`);
     lines.push('');
     lines.push('THEIR OFFER:');
     lines.push(...buildSideLines('their'));
-    lines.push(`  Total — Suggested: ${formatLS(totals.theirSuggested)} | Price: ${formatLS(totals.theirCustom)}`);
+    lines.push(`  Total — Market: ${formatLS(totals.theirMarket)} | Price: ${formatLS(totals.theirCustom)}`);
     lines.push('');
     lines.push(`Difference (Price basis): ${diffLine}`);
 
@@ -1580,7 +1580,7 @@ async function submitSuggestion() {
 
     const ok = await supabaseInsert('suggestions', {
         item_name: itemName,
-        suggested_price: price,
+        Market_price: price,
         reason: reason || null,
         server_id: currentServerId
     });
