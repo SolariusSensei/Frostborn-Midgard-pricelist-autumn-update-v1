@@ -65,7 +65,7 @@ input:checked + .broken-slider:before { transform: translateX(24px); }
 .balance-bar-offer { height: 100%; background-color: var(--color-gear-blue); transition: width 0.5s ease-in-out; }
 .balance-bar-target { height: 100%; background-color: var(--color-gear-legendary); transition: width 0.5s ease-in-out; }
 
-/* Row fields grid (Qty / Suggested Value / Price / Remove) — replaces a
+/* Row fields grid (Qty / Market Value / Price / Remove) — replaces a
    fixed Tailwind grid-cols-2/4 so it can drop to a single column on
    very narrow phones instead of cramming 4 fields into ~340px. */
 .row-fields-grid {
