@@ -33,8 +33,8 @@ let rowSeq  = { your: 0,  their: 0 };
 
 // last computed totals, kept around for the copy-trade text builder
 let totals = {
-    yourBook: 0, yourCustom: 0,
-    theirBook: 0, theirCustom: 0
+    yourSuggested: 0, yourCustom: 0,
+    theirSuggested: 0, theirCustom: 0
 };
 
 // =============================================================
@@ -934,9 +934,9 @@ function calculateItemLS(itemName, quantity, level, isBroken, armorPiece) {
 // TRADE BUILDER — generic row engine, shared by 'your' and 'their'
 // ---------------------------------------------------------------
 // Each side is an unlimited list of rows. Every row carries both
-// its computed book value (from the price database + gear state)
+// its computed Suggested value (from the price database + gear state)
 // and an independently editable "price" — what's actually being
-// negotiated for that item. The price auto-follows book value
+// negotiated for that item. The price auto-follows Suggested value
 // until the person edits it directly, at which point it's marked
 // "touched" and stops auto-syncing (until reset).
 //
@@ -976,8 +976,8 @@ function createRowHTML(side, row) {
                     class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-center">
             </div>
             <div>
-                <label class="block text-xs font-medium mb-1 text-gray-400">Book Value</label>
-                <span id="${side}BookLS-${id}" class="font-bold text-gray-300 text-sm block py-2 text-center">0.00 LS</span>
+                <label class="block text-xs font-medium mb-1 text-gray-400">Suggested Value</label>
+                <span id="${side}SuggestedLS-${id}" class="font-bold text-gray-300 text-sm block py-2 text-center">0.00 LS</span>
             </div>
             <div>
                 <label class="flex items-center justify-between text-xs font-medium mb-1 text-gray-400 gap-1">
@@ -1147,7 +1147,7 @@ function selectRowItem(side, id, itemName) {
     row.level        = 0;
     row.isBroken     = false;
     row.armorPiece   = item.isArmorSet ? 'Full Set' : 'N/A';
-    row.priceTouched = false; // fresh item: price follows book value again
+    row.priceTouched = false; // fresh item: price follows Suggested value again
 
     document.getElementById(`${side}ItemNameDisplay-${id}`).textContent = itemName;
     document.getElementById(`${side}ItemNameDisplay-${id}`).classList.add(side === 'your' ? 'text-blue-300' : 'text-amber-300');
@@ -1213,18 +1213,18 @@ function resetRowPrice(side, id) {
     updateTotals();
 }
 
-// Recomputes a row's book value display, and — if the price hasn't
-// been manually touched — keeps its price mirrored to book value.
+// Recomputes a row's Suggested value display, and — if the price hasn't
+// been manually touched — keeps its price mirrored to Suggested value.
 function recalculateRow(side, row) {
-    const bookValue = row.name
+    const SuggestedValue = row.name
         ? calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece)
         : 0;
 
-    const bookDisplay = document.getElementById(`${side}BookLS-${row.id}`);
-    if (bookDisplay) bookDisplay.textContent = formatLS(bookValue);
+    const SuggestedDisplay = document.getElementById(`${side}SuggestedLS-${row.id}`);
+    if (SuggestedDisplay) SuggestedDisplay.textContent = formatLS(SuggestedValue);
 
     if (!row.priceTouched) {
-        row.customPrice = bookValue;
+        row.customPrice = SuggestedValue;
     }
 
     const priceInput = document.getElementById(`${side}Price-${row.id}`);
@@ -1232,7 +1232,7 @@ function recalculateRow(side, row) {
         priceInput.value = row.customPrice.toFixed(2);
     }
 
-    return bookValue;
+    return SuggestedValue;
 }
 
 // Adds a single row without disturbing any other row's DOM/state —
@@ -1305,30 +1305,30 @@ function resetTradeBuilder() {
 // =============================================================
 
 function sideTotals(side) {
-    let book = 0, custom = 0;
+    let Suggested = 0, custom = 0;
     rows[side].forEach(row => {
         if (!row.name) return;
-        book   += calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
+        Suggested   += calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
         custom += row.priceTouched ? row.customPrice : calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
     });
-    return { book, custom };
+    return { Suggested, custom };
 }
 
 function updateTotals() {
     const your  = sideTotals('your');
     const their = sideTotals('their');
 
-    totals = { yourBook: your.book, yourCustom: your.custom, theirBook: their.book, theirCustom: their.custom };
+    totals = { yourSuggested: your.Suggested, yourCustom: your.custom, theirSuggested: their.Suggested, theirCustom: their.custom };
 
-    document.getElementById('yourBookTotalLS').textContent   = formatLS(your.book);
+    document.getElementById('yourSuggestedTotalLS').textContent   = formatLS(your.Suggested);
     document.getElementById('yourCustomTotalLS').textContent = formatLS(your.custom);
-    document.getElementById('theirBookTotalLS').textContent  = formatLS(their.book);
+    document.getElementById('theirSuggestedTotalLS').textContent  = formatLS(their.Suggested);
     document.getElementById('theirCustomTotalLS').textContent= formatLS(their.custom);
 
     document.getElementById('your-total-ls').textContent  = formatLS(your.custom);
-    document.getElementById('your-total-book').textContent = formatLS(your.book);
+    document.getElementById('your-total-Suggested').textContent = formatLS(your.Suggested);
     document.getElementById('their-total-ls').textContent = formatLS(their.custom);
-    document.getElementById('their-total-book').textContent = formatLS(their.book);
+    document.getElementById('their-total-Suggested').textContent = formatLS(their.Suggested);
 
     const tolerance = 0.01;
     const diff      = your.custom - their.custom;
@@ -1376,17 +1376,17 @@ function updateTotals() {
     document.getElementById('tradeVerdict').className       = `text-center text-lg font-semibold ${statusClass}`;
     document.getElementById('balanceStatusText').textContent = balanceText;
 
-    const bookCheckEl = document.getElementById('bookValueCheck');
+    const SuggestedCheckEl = document.getElementById('SuggestedValueCheck');
     if (!hasYourItems || !hasTheirItems) {
-        bookCheckEl.textContent = 'Add items to compare against book value.';
+        SuggestedCheckEl.textContent = 'Add items to compare against Suggested value.';
     } else {
-        const bookDiff = your.book - their.book;
-        if (Math.abs(bookDiff) < tolerance) {
-            bookCheckEl.textContent = 'At book value, this trade is exactly even.';
-        } else if (bookDiff > 0) {
-            bookCheckEl.textContent = `At book value, your side is worth ${formatLS(bookDiff)} more — you may be discounting your own items or getting a deal from them.`;
+        const SuggestedDiff = your.Suggested - their.Suggested;
+        if (Math.abs(SuggestedDiff) < tolerance) {
+            SuggestedCheckEl.textContent = 'At Suggested value, this trade is exactly even.';
+        } else if (SuggestedDiff > 0) {
+            SuggestedCheckEl.textContent = `At Suggested value, your side is worth ${formatLS(SuggestedDiff)} more — you may be discounting your own items or getting a deal from them.`;
         } else {
-            bookCheckEl.textContent = `At book value, their side is worth ${formatLS(Math.abs(bookDiff))} more — you may be paying a premium or discounting their items.`;
+            SuggestedCheckEl.textContent = `At Suggested value, their side is worth ${formatLS(Math.abs(SuggestedDiff))} more — you may be paying a premium or discounting their items.`;
         }
     }
 }
@@ -1409,9 +1409,9 @@ function buildSideLines(side) {
     const list = rows[side].filter(r => r.name);
     if (!list.length) return ['  (nothing listed)'];
     return list.map(row => {
-        const book  = calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
-        const price = row.priceTouched ? row.customPrice : book;
-        return `  - ${row.quantity}x ${row.name}${gearSuffix(row)} — Book: ${formatLS(book)} | Price: ${formatLS(price)}`;
+        const Suggested  = calculateItemLS(row.name, row.quantity, row.level, row.isBroken, row.armorPiece);
+        const price = row.priceTouched ? row.customPrice : Suggested;
+        return `  - ${row.quantity}x ${row.name}${gearSuffix(row)} — Suggested: ${formatLS(Suggested)} | Price: ${formatLS(price)}`;
     });
 }
 
@@ -1436,11 +1436,11 @@ function buildTradeSummaryText() {
     lines.push('');
     lines.push('YOUR OFFER:');
     lines.push(...buildSideLines('your'));
-    lines.push(`  Total — Book: ${formatLS(totals.yourBook)} | Price: ${formatLS(totals.yourCustom)}`);
+    lines.push(`  Total — Suggested: ${formatLS(totals.yourSuggested)} | Price: ${formatLS(totals.yourCustom)}`);
     lines.push('');
     lines.push('THEIR OFFER:');
     lines.push(...buildSideLines('their'));
-    lines.push(`  Total — Book: ${formatLS(totals.theirBook)} | Price: ${formatLS(totals.theirCustom)}`);
+    lines.push(`  Total — Suggested: ${formatLS(totals.theirSuggested)} | Price: ${formatLS(totals.theirCustom)}`);
     lines.push('');
     lines.push(`Difference (Price basis): ${diffLine}`);
 
