@@ -726,7 +726,7 @@ const suggestions = await supabaseFetch('suggestions?select=*&status=eq.pending&
         const itemName = group.displayName;
         const exists   = !!getItemData(itemName);
         const safeId   = itemName.replace(/[^a-zA-Z0-9]/g, '');
-        const prices   = group.items.map(s => Number(s.Market_price));
+        const prices   = group.items.map(s => Number(s.suggested_price));
         const avg      = prices.reduce((a, b) => a + b, 0) / prices.length;
 
         const newItemFields = exists ? '' : `
