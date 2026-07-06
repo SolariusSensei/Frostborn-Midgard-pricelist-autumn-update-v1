@@ -34,7 +34,7 @@
 
     <div class="mb-8 text-center">
         <h1 class="text-4xl font-extrabold gold-text">Trade Builder</h1>
-        <p class="text-gray-400 text-sm mt-1">List anything on either side of the trade. Every item shows its book value and lets you set the price you're actually negotiating.</p>
+        <p class="text-gray-400 text-sm mt-1">List anything on either side of the trade. Every item shows its Suggested value and lets you set the price you're actually negotiating.</p>
     </div>
 
     <!-- Price Suggestion Modal -->
@@ -248,8 +248,8 @@ IcyWolf:
             </div>
             <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-700 text-center">
                 <div>
-                    <div class="text-xs text-gray-400">Book Total</div>
-                    <div id="yourBookTotalLS" class="text-xl font-bold text-gray-300">0.00 LS</div>
+                    <div class="text-xs text-gray-400">Suggested Total</div>
+                    <div id="yourSuggestedTotalLS" class="text-xl font-bold text-gray-300">0.00 LS</div>
                 </div>
                 <div>
                     <div class="text-xs text-gray-400">Your Price Total</div>
@@ -270,8 +270,8 @@ IcyWolf:
             </div>
             <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-700 text-center">
                 <div>
-                    <div class="text-xs text-gray-400">Book Total</div>
-                    <div id="theirBookTotalLS" class="text-xl font-bold text-gray-300">0.00 LS</div>
+                    <div class="text-xs text-gray-400">Suggested Total</div>
+                    <div id="theirSuggestedTotalLS" class="text-xl font-bold text-gray-300">0.00 LS</div>
                 </div>
                 <div>
                     <div class="text-xs text-gray-400">Their Price Total</div>
@@ -288,7 +288,7 @@ IcyWolf:
             <div class="p-4 bg-blue-900/50 rounded-lg border border-blue-700">
                 <h3 class="text-sm font-semibold text-gray-400 mb-1">Your Offer (Price)</h3>
                 <span id="your-total-ls" class="text-3xl font-bold text-blue-300">0.00 LS</span>
-                <div class="text-xs text-gray-500 mt-1">Book: <span id="your-total-book">0.00 LS</span></div>
+                <div class="text-xs text-gray-500 mt-1">Suggested: <span id="your-total-Suggested">0.00 LS</span></div>
             </div>
             <div class="p-4">
                 <h3 class="text-sm font-semibold text-gray-400 mb-1">Live Difference (Price basis)</h3>
@@ -297,7 +297,7 @@ IcyWolf:
             <div class="p-4 bg-amber-900/50 rounded-lg border border-amber-700">
                 <h3 class="text-sm font-semibold text-gray-400 mb-1">Their Offer (Price)</h3>
                 <span id="their-total-ls" class="text-3xl font-bold text-amber-300">0.00 LS</span>
-                <div class="text-xs text-gray-500 mt-1">Book: <span id="their-total-book">0.00 LS</span></div>
+                <div class="text-xs text-gray-500 mt-1">Suggested: <span id="their-total-Suggested">0.00 LS</span></div>
             </div>
         </div>
         <div>
@@ -314,8 +314,8 @@ IcyWolf:
                 <p id="tradeVerdict" class="text-center text-lg font-semibold text-gray-300">Waiting for input...</p>
             </div>
             <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-400 mb-2">Book Value Check</h3>
-                <p id="bookValueCheck" class="text-sm text-gray-300">Add items to compare against book value.</p>
+                <h3 class="text-lg font-semibold text-gray-400 mb-2">Suggested Value Check</h3>
+                <p id="SuggestedValueCheck" class="text-sm text-gray-300">Add items to compare against Suggested value.</p>
             </div>
         </div>
         <button id="openCopyTrade" class="w-full py-3 bg-green-700 hover:bg-green-600 text-white font-bold rounded-lg transition shadow-lg">
