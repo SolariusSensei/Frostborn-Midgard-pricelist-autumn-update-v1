@@ -621,18 +621,17 @@ function renderChatParserPreview() {
 async function submitChatParsedTrade() {
     const statusEl = document.getElementById('chatParserStatus');
 
-    const observationRows = parsedTradeLines
+    const legs = parsedTradeLines
         .filter(l => l.isLS || l.resolvedName)
         .map(l => ({
-            trade_id: `chatparse-${Date.now()}-${l.tradeIndex}`,
-            server_id: currentServerId,
+            tradeIndex: l.tradeIndex,
             side: l.side,
             item_name: l.isLS ? 'LS' : l.resolvedName,
             quantity: l.isLS ? 1 : l.quantity,
-            total_price_ls: l.isLS ? l.priceLS : null
+            price_ls: l.isLS ? l.priceLS : null
         }));
 
-    if (!observationRows.length) {
+    if (!legs.length) {
         if (statusEl) {
             statusEl.textContent = 'Nothing resolvable to submit.';
             statusEl.className   = 'text-red-400 text-sm mt-2';
@@ -647,12 +646,12 @@ async function submitChatParsedTrade() {
 
     const ok = await callAdminAction('submitParsedTrade', {
         serverId: currentServerId,
-        rows: observationRows
+        legs
     });
 
     if (statusEl) {
         if (ok) {
-            statusEl.textContent = `Submitted ${observationRows.length} observation row(s).`;
+            statusEl.textContent = `Submitted ${legs.length} observation row(s).`;
             statusEl.className   = 'text-green-400 text-sm mt-2';
             setTimeout(closeChatParserModal, 1200);
         } else {
