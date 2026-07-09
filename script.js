@@ -559,8 +559,15 @@ function parseTradeChatText(text) {
 function updateChatParserSubmitState() {
     const btn = document.getElementById('chatParserSubmit');
     if (!btn) return;
-    const hasResolvableLine = parsedTradeLines.some(l => l.isLS || l.resolvedName);
-    btn.disabled = !hasResolvableLine;
+
+    const resolvedLines = parsedTradeLines.filter(l => l.isLS || l.resolvedName);
+    const sidesWithResolved = new Set(resolvedLines.map(l => l.side));
+    const hasEnoughSides = sidesWithResolved.size >= 2;
+
+    btn.disabled = !hasEnoughSides;
+    btn.textContent = hasEnoughSides
+        ? `Submit ${resolvedLines.length} Trade Leg${resolvedLines.length === 1 ? '' : 's'}`
+        : 'Need at least 2 sides with resolved items';
 }
 
 function setParsedLineResolution(lineId, itemName) {
