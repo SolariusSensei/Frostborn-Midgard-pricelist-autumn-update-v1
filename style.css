@@ -1,116 +1,103 @@
-/* ============================================
-   Midgard Barter Ledger — "Re:Anime" dark theme
-   Near-black background + neon lime-green accents
-   ============================================ */
-
+/* Nordic/Viking Theme Styles — "Re:Anime" dark/neon-lime pass */
 :root {
-  --bg-void: #0a0b0d;
-  --bg-panel: #14161a;
-  --bg-panel-raised: #1b1e23;
-  --border-subtle: #2a2e35;
-  --lime: #9dff1a;
-  --lime-bright: #c3ff5c;
-  --lime-dim: #6fb812;
-  --text-primary: #f3f5f0;
-  --text-muted: #8b9098;
+    --color-primary: #6fb812;       /* was Deep Blue -> lime (used for scrollbar thumb) */
+    --color-secondary: #9dff1a;     /* was Gold/Bronze -> neon lime (headers, gold-text, accents) */
+    --color-background: #0a0b0d;    /* was Dark Slate -> near-black */
+    --color-card: #14161a;          /* was Dark Gray Card -> near-black panel */
+    --color-text-light: #f3f5f0;
+    --color-text-medium: #8b9098;
+    --color-gear-green: #10b981;    /* kept: rarity/functional color, unrelated to theme accent */
+    --color-gear-blue: #3b82f6;     /* kept: "Your Offer" balance bar meaning */
+    --color-gear-purple: #8b5cf6;   /* kept: rarity/functional color */
+    --color-gear-legendary: #eab308;/* kept: rarity/functional color */
 }
 
-html, body {
-  background-color: var(--bg-void);
-  color: var(--text-primary);
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text-light);
+    min-height: 100vh;
 }
 
-/* Neon accent text (replaces old gold-text) */
+/* --- LAYOUT STYLES --- */
+#your-offer-panel > div > h2,
+#their-offer-panel > div > h2,
+#about-section h1 {
+    border-bottom-color: var(--color-secondary);
+    border-bottom-width: 2px;
+}
+
+/* Animated Verdict Box */
+.status-balanced { border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+.status-overpaid { border: 2px solid #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+.status-deficit { border: 2px solid #ef4444; box-shadow: 0 0 15px rgba(239, 68, 84, 0.3); }
+
+/* Smooth hover for search results */
+.search-result-item:hover {
+    background-color: #22262c;
+    transform: translateX(5px);
+    transition: all 0.2s ease;
+}
+
+/* Custom Scrollbar for Item Search Results */
+.custom-scrollbar::-webkit-scrollbar { width: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: var(--color-card); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-secondary); }
+
+/* Custom Toggle Switch */
+.broken-toggle-switch { position: relative; display: inline-block; width: 48px; height: 24px; }
+.broken-toggle-switch input { opacity: 0; width: 0; height: 0; }
+.broken-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ef4444; transition: .4s; border-radius: 24px; }
+.broken-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .broken-slider { background-color: #10b981; }
+input:checked + .broken-slider:before { transform: translateX(24px); }
+
+/* Neon Accent Text (was Gold Accent Text) */
 .gold-text {
-  color: var(--lime);
-  text-shadow: 0 0 12px rgba(157, 255, 26, 0.35);
-  letter-spacing: 0.02em;
+    color: var(--color-secondary);
+    text-shadow: 0 0 10px rgba(157, 255, 26, 0.3);
 }
 
-/* Panels */
-.bg-gray-800, .bg-gray-900\/50, .bg-gray-900\/90, .bg-gray-900\/95, .bg-gray-900\/80 {
-  background-color: var(--bg-panel) !important;
+#admin-only-section {
+    display: none; /* This hides it from everyone */
 }
 
-.border-gray-700, .border-gray-600 {
-  border-color: var(--border-subtle) !important;
+/* Balance Bar Styles */
+.balance-scale-container { display: flex; align-items: center; height: 20px; background: #22262c; border-radius: 5px; overflow: hidden; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.balance-bar-offer { height: 100%; background-color: var(--color-gear-blue); transition: width 0.5s ease-in-out; }
+.balance-bar-target { height: 100%; background-color: var(--color-gear-legendary); transition: width 0.5s ease-in-out; }
+
+/* Row fields grid (Qty / Market Value / Price / Remove) — replaces a
+   fixed Tailwind grid-cols-2/4 so it can drop to a single column on
+   very narrow phones instead of cramming 4 fields into ~340px. */
+.row-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+@media (max-width: 400px) {
+    .row-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (min-width: 640px) {
+    .row-fields-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
-/* Buttons: swap amber -> lime */
-.bg-amber-600, .bg-amber-500 {
-  background-color: var(--lime-dim) !important;
-  color: #05130a !important;
-  box-shadow: 0 0 18px rgba(157, 255, 26, 0.25);
-}
-.bg-amber-600:hover, .bg-amber-500:hover, .hover\:bg-amber-500:hover, .hover\:bg-amber-400:hover {
-  background-color: var(--lime) !important;
-  box-shadow: 0 0 24px rgba(157, 255, 26, 0.45);
-}
-.text-amber-400, .text-amber-300 {
-  color: var(--lime-bright) !important;
-}
-.border-amber-700 {
-  border-color: var(--lime-dim) !important;
-}
-.bg-amber-700, .hover\:bg-amber-600:hover {
-  background-color: #1a2410 !important;
-  color: var(--lime-bright) !important;
-}
-.bg-amber-900\/50, .border-amber-700 {
-  background-color: rgba(157, 255, 26, 0.08) !important;
-}
+/* Rarity Indicator Dot in Search Results */
+.search-result-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; cursor: pointer; transition: background-color 0.2s ease; }
+.search-result-item:hover { background-color: #22262c; }
+.search-result-name { display: flex; align-items: center; gap: 0.5rem; overflow: hidden; min-width: 0; }
+.search-result-name span { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.rarity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.search-result-price { padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; color: #1f2937; white-space: nowrap; flex-shrink: 0; margin-left: 0.5rem; }
 
-/* Scrollbars */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--bg-void);
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--lime-dim);
-  border-radius: 8px;
-}
-
-/* Balance scale bar */
-.balance-scale-container {
-  position: relative;
-  height: 14px;
-  width: 100%;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--bg-panel-raised);
-  border: 1px solid var(--border-subtle);
-  display: flex;
-}
-.balance-bar-offer {
-  height: 100%;
-  background: linear-gradient(90deg, var(--lime-dim), var(--lime));
-  transition: width 0.3s ease;
-}
-.balance-bar-target {
-  height: 100%;
-  background: var(--bg-panel-raised);
-  transition: width 0.3s ease;
-}
-
-/* Rounded pill buttons / links (Market, About, Feedback) get the neon outline look */
-a[href="market.html"], button[onclick*="about-section"] {
-  border-width: 2px !important;
-}
-
-/* Subtle glow on primary CTAs */
-#openCopyTrade {
-  box-shadow: 0 0 20px rgba(157, 255, 26, 0.25);
-}
-
-/* Inputs */
-input, textarea, select {
-  background-color: #0f1114 !important;
-  border-color: var(--border-subtle) !important;
-  color: var(--text-primary) !important;
-}
-input:focus, textarea:focus, select:focus {
-  outline: none !important;
-  box-shadow: 0 0 0 2px var(--lime) !important;
-}
+/* Styled Verdict Box */
+#verdictBox { border: 2px solid var(--color-text-medium); transition: border-color 0.3s ease, background-color 0.3s ease; background-color: rgba(20, 22, 26, 0.6); }
+#verdictBox.status-balanced { border-color: var(--color-gear-green); background-color: rgba(16, 185, 129, 0.1); }
+#verdictBox.status-overpaid { border-color: var(--color-gear-blue); background-color: rgba(59, 130, 246, 0.1); }
+#verdictBox.status-deficit { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.1); }
+#verdictBox h3 { margin-bottom: 0.75rem; text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--color-secondary); }
+#tradeVerdict { text-align: center; font-size: 1.125rem; font-weight: 600; }
