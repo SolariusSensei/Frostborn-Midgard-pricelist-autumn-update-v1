@@ -1,9 +1,11 @@
 /* Nordic/Viking Theme Styles — "Re:Anime" dark/neon-lime pass */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
 :root {
-    --color-primary: #6fb812;       /* was Deep Blue -> lime (used for scrollbar thumb) */
-    --color-secondary: #9dff1a;     /* was Gold/Bronze -> neon lime (headers, gold-text, accents) */
-    --color-background: #0a0b0d;    /* was Dark Slate -> near-black */
-    --color-card: #14161a;          /* was Dark Gray Card -> near-black panel */
+    --color-primary: #7fdb00;       /* was Deep Blue -> lime (used for scrollbar thumb) */
+    --color-secondary: #a6ff00;     /* was Gold/Bronze -> brighter, more saturated neon lime */
+    --color-background: #000000;   /* was Dark Slate -> true black, like Re:Anime */
+    --color-card: #101114;         /* was Dark Gray Card -> near-black panel */
     --color-text-light: #f3f5f0;
     --color-text-medium: #8b9098;
     --color-gear-green: #10b981;    /* kept: rarity/functional color, unrelated to theme accent */
@@ -17,6 +19,23 @@ body {
     background-color: var(--color-background);
     color: var(--color-text-light);
     min-height: 100vh;
+}
+
+/* Re:Anime-style display headings: bold, condensed, tight tracking, uppercase */
+h1.gold-text,
+h2.gold-text,
+#verdictBox h3 {
+    font-family: 'Rajdhani', 'Inter', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* The big "Trade Builder" hero title gets extra weight + a punchier glow */
+h1.gold-text {
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 16px rgba(166, 255, 0, 0.45);
 }
 
 /* --- LAYOUT STYLES --- */
